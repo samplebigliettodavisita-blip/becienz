@@ -1,0 +1,3114 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Medical Psychology (MU Plovdiv) — Interactive Physics Atlas v4.0</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #090d16;
+      color: #e2e8f0;
+      overflow: hidden;
+      touch-action: none;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+    #canvas-container {
+      background-color: #090d16;
+      background-image: radial-gradient(#1e293b 1.2px, transparent 1.2px);
+      background-size: 26px 26px;
+      cursor: grab;
+      touch-action: none;
+    }
+    #canvas-container.panning { cursor: grabbing; }
+
+    .draggable-node {
+      cursor: grab;
+      user-select: none;
+      will-change: left, top;
+      touch-action: none;
+    }
+    .draggable-node:active {
+      cursor: grabbing;
+    }
+
+    [contenteditable="true"] {
+      outline: 2px solid #22d3ee !important;
+      background-color: rgba(15, 23, 42, 0.95) !important;
+      border-radius: 4px;
+      padding: 2px 4px;
+      cursor: text !important;
+      user-select: text !important;
+    }
+
+    .editable-hint:hover {
+      text-decoration: underline;
+      text-decoration-style: dotted;
+      text-decoration-color: #38bdf8;
+    }
+
+    .sidebar-transition {
+      transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+    }
+
+    /* Visual Shockwave Ring on Spacebar */
+    @keyframes shockwaveExpand {
+      0% {
+        transform: translate(-50%, -50%) scale(0.2);
+        opacity: 0.9;
+        border-width: 8px;
+      }
+      100% {
+        transform: translate(-50%, -50%) scale(4.2);
+        opacity: 0;
+        border-width: 1px;
+      }
+    }
+    .shockwave-ring {
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      border-radius: 9999px;
+      border: 4px solid #22d3ee;
+      box-shadow: 0 0 40px rgba(34, 211, 238, 0.5), inset 0 0 40px rgba(99, 102, 241, 0.4);
+      pointer-events: none;
+      z-index: 5;
+      animation: shockwaveExpand 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* ==========================================================================
+       iPHONE 16 PRO MAX MODE STYLES (440x956 logical viewport + Dynamic Island)
+       ========================================================================== */
+    body.iphone-framed {
+      background: radial-gradient(circle at center, #1e293b 0%, #050811 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+    }
+    body.iphone-framed #app-shell {
+      width: 440px !important;
+      height: min(956px, 96vh) !important;
+      border-radius: 54px;
+      border: 10px solid #27272a;
+      box-shadow: 0 0 0 2px #52525b, 0 30px 80px rgba(0,0,0,0.85);
+      position: relative;
+      overflow: hidden;
+      background: #090d16;
+    }
+    #dynamic-island {
+      display: none;
+    }
+    body.iphone-mode #dynamic-island {
+      display: flex;
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 122px;
+      height: 32px;
+      background: #000000;
+      border-radius: 20px;
+      z-index: 60;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+      pointer-events: none;
+    }
+    body.iphone-mode header {
+      padding-top: 46px !important;
+      height: 88px !important;
+      padding-left: 14px !important;
+      padding-right: 14px !important;
+    }
+    body.iphone-mode .desktop-only {
+      display: none !important;
+    }
+    body.iphone-mode #mobile-bottom-nav {
+      display: flex !important;
+    }
+    body.iphone-mode #left-sidebar,
+    body.iphone-mode #right-sidebar {
+      position: absolute !important;
+      bottom: 64px !important;
+      top: 88px !important;
+      width: 100% !important;
+      z-index: 45 !important;
+      background: rgba(9, 13, 22, 0.98) !important;
+      backdrop-filter: blur(16px);
+    }
+    body.iphone-mode #bottom-canvas-toolbar {
+      bottom: 74px !important;
+      left: 50% !important;
+      transform: translateX(-50%) !important;
+      width: 94% !important;
+      justify-content: center !important;
+    }
+    body.iphone-mode #basket-widget {
+      bottom: 130px !important;
+      right: 12px !important;
+    }
+  </style>
+</head>
+<body class="h-screen w-screen flex flex-col select-none">
+
+  <!-- APP SHELL WRAPPER -->
+  <div id="app-shell" class="w-full h-full flex flex-col relative overflow-hidden">
+
+    <!-- DYNAMIC ISLAND (Visible only when iPhone 16 Pro Max Mode is ON) -->
+    <div id="dynamic-island">
+      <div class="w-2.5 h-2.5 rounded-full bg-emerald-500/80 animate-pulse"></div>
+      <span id="island-label" class="text-[9px] font-bold text-slate-400 tracking-wider mono">PSYCH 4.0</span>
+      <div class="w-3 h-3 rounded-full bg-indigo-950 border border-indigo-500/40"></div>
+    </div>
+
+    <!-- TOP NAVIGATION BAR -->
+    <header class="h-14 bg-slate-900/95 border-b border-slate-800 px-4 flex items-center justify-between z-30 shrink-0 gap-2">
+      <!-- Left: Sidebar Toggle + Brand -->
+      <div class="flex items-center gap-2">
+        <button onclick="toggleLeftSidebar()" id="btn-left-sidebar" title="Mostra/Nascondi Colonna Sinistra"
+          class="desktop-only px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition">
+          <span>◧</span> <span class="hidden sm:inline">Capitoli</span>
+        </button>
+
+        <div class="flex items-center gap-2">
+          <div id="brand-icon" class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-600 flex items-center justify-center font-extrabold text-white shadow text-sm">
+            Ψ
+          </div>
+          <div>
+            <h1 class="font-bold text-xs sm:text-sm tracking-tight text-white flex items-center gap-1.5">
+              <span id="brand-title">Medical Psychology Atlas</span>
+              <span class="desktop-only text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                v4.0 • Spacebar Wave + Zoom/Pan Physics
+              </span>
+            </h1>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center: Desktop Mode Switcher -->
+      <div class="desktop-only flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+        <button onclick="switchMode('map')" id="tab-map" class="mode-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-600 text-white transition">
+          🕸️ Concept Map
+        </button>
+        <button onclick="switchMode('practicals')" id="tab-practicals" class="mode-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">
+          🛠️ Protocolli Clinici
+        </button>
+        <button onclick="switchMode('reference')" id="tab-reference" class="mode-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">
+          📐 Tabelle & Appendici
+        </button>
+        <button onclick="switchMode('anki')" id="tab-anki" class="mode-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">
+          ⚡ Anki Export
+        </button>
+      </div>
+
+      <!-- Right: Search + Basketball Trigger + JSON + iPhone 16 Pro Max + Zen + Right Sidebar -->
+      <div class="flex items-center gap-1.5">
+        <div class="relative hidden 2xl:block">
+          <input id="global-search" type="text" oninput="handleSearch(this.value)" placeholder="Cerca SPIKES, malingering, nosognosia..."
+            class="w-40 bg-slate-950 border border-slate-800 rounded-lg pl-7 pr-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-cyan-500" />
+          <span class="absolute left-2 top-1.5 text-slate-500 text-xs">🔍</span>
+        </div>
+
+        <!-- BASKETBALL MINIGAME TRIGGER (ON/OFF) -->
+        <button onclick="toggleBasketMinigame()" id="btn-basket-toggle" title="Apri/Chiudi Minigioco Fisico Basket Slingshot"
+          class="px-2.5 py-1.5 rounded-lg bg-orange-950/80 hover:bg-orange-900 text-orange-300 border border-orange-700/50 text-[11px] font-semibold flex items-center gap-1 transition">
+          <span>🏀</span> <span id="basket-toggle-label">Basket: OFF</span>
+        </button>
+
+        <button onclick="openSubjectModal()" title="Incolla o Importa una nuova materia in JSON"
+          class="desktop-only px-2.5 py-1.5 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/50 text-[11px] font-semibold transition">
+          📥 JSON
+        </button>
+
+        <!-- iPHONE 16 PRO MAX TRIGGER (OFF by default) -->
+        <button onclick="toggleIPhoneMode()" id="btn-iphone-mode" title="Attiva/Disattiva Vista Ottimizzata iPhone 16 Pro Max"
+          class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] font-semibold flex items-center gap-1 transition">
+          <span>📱</span> <span id="iphone-mode-label">iPhone 16 PM: OFF</span>
+        </button>
+
+        <button onclick="toggleIPhoneFrameStyle()" id="btn-iphone-frame" title="Passa tra Cornice Simulatore e Tutto Schermo Mobile"
+          class="hidden px-2 py-1.5 rounded-lg bg-purple-950/80 hover:bg-purple-900 text-purple-300 border border-purple-700/50 text-[10px] font-semibold transition">
+          🔲 Cornice
+        </button>
+
+        <button onclick="toggleZenMode()" title="Modalità Schermo Intero (Chiudi entrambe le barre)"
+          class="desktop-only px-2.5 py-1.5 rounded-lg bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/50 text-xs font-semibold transition">
+          ⛶ Zen
+        </button>
+
+        <button onclick="toggleRightSidebar()" id="btn-right-sidebar" title="Mostra/Nascondi Pannello Dettagli Destro"
+          class="desktop-only px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition">
+          <span class="hidden sm:inline">Inspector</span> <span>◨</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- MAIN WORKSPACE -->
+    <div class="flex-1 flex overflow-hidden relative">
+
+      <!-- FLOATING RE-OPEN BUTTONS WHEN SIDEBARS ARE COLLAPSED -->
+      <button id="float-open-left" onclick="toggleLeftSidebar()"
+        class="desktop-only hidden absolute left-2 top-3 z-30 px-2.5 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 text-cyan-300 border border-slate-700 text-xs font-bold shadow-xl backdrop-blur">
+        ▶ Capitoli
+      </button>
+      <button id="float-open-right" onclick="toggleRightSidebar()"
+        class="desktop-only hidden absolute right-2 top-3 z-30 px-2.5 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 text-cyan-300 border border-slate-700 text-xs font-bold shadow-xl backdrop-blur">
+        ◀ Inspector
+      </button>
+
+      <!-- LEFT SIDEBAR: CHAPTERS + ADD NEW CHAPTER -->
+      <aside id="left-sidebar" class="bg-slate-900/95 border-r border-slate-800 flex flex-col z-20 shrink-0 sidebar-transition" style="width: 290px;">
+        <div class="p-2.5 border-b border-slate-800 flex items-center justify-between">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Capitoli (<span id="progress-badge" class="text-emerald-400">0/17</span>)</span>
+          <div class="flex gap-1">
+            <button onclick="addNewLecture()" class="text-[10px] px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold">+ Capitolo</button>
+            <button onclick="filterCluster('all')" class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700">Tutti</button>
+          </div>
+        </div>
+
+        <!-- Dynamic Cluster Filters -->
+        <div id="cluster-filters" class="px-2.5 py-2 border-b border-slate-800/80 grid grid-cols-2 gap-1 text-[10px]"></div>
+
+        <div id="lecture-list" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
+
+        <!-- Data Management Footer -->
+        <div class="p-2 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between gap-1">
+          <button onclick="exportBackupJSON()" class="flex-1 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] text-slate-300 font-medium">💾 Backup JSON</button>
+          <button onclick="autoArrangeRadial()" class="py-1 px-2 rounded bg-cyan-950/60 hover:bg-cyan-900/80 text-[10px] text-cyan-300 border border-cyan-800/40" title="Riordina i nodi in ellisse">◎ Riordina</button>
+          <button onclick="resetToDefaults()" class="py-1 px-2 rounded bg-rose-950/60 hover:bg-rose-900/80 text-[10px] text-rose-300 border border-rose-800/40" title="Ripristina dati originali del libro">↺ Reset</button>
+        </div>
+      </aside>
+
+      <!-- CENTER VIEWPORT -->
+      <main class="flex-1 relative overflow-hidden bg-slate-950">
+
+        <!-- VIEW 1: PHYSICS-ENABLED INTERACTIVE CONCEPT MAP -->
+        <div id="view-map" class="w-full h-full relative">
+          <div id="canvas-container" class="w-full h-full relative overflow-hidden">
+            <div id="map-world" class="absolute top-0 left-0 origin-top-left" style="width: 4200px; height: 3000px;">
+              <svg id="map-edges" class="w-full h-full absolute top-0 left-0 pointer-events-none"></svg>
+              <div id="map-nodes" class="w-full h-full absolute top-0 left-0"></div>
+            </div>
+          </div>
+
+          <!-- Floating Bottom Toolbar -->
+          <div id="bottom-canvas-toolbar" class="absolute bottom-4 left-4 flex flex-wrap items-center gap-1.5 bg-slate-900/95 backdrop-blur border border-slate-800 p-1.5 rounded-xl shadow-2xl z-20">
+            <button onclick="zoomAtCenter(1.18)" class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs">+</button>
+            <span id="zoom-label" class="text-[11px] mono px-1.5 text-cyan-300 font-bold">65%</span>
+            <button onclick="zoomAtCenter(0.85)" class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs">−</button>
+            <button onclick="resetMapView()" class="px-2 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-300">Centra</button>
+
+            <div class="h-4 w-[1px] bg-slate-700 mx-0.5"></div>
+
+            <!-- PHYSICS CONTROLS -->
+            <button onclick="togglePhysicsEngine()" id="btn-physics-toggle" class="px-2.5 h-7 rounded-lg bg-emerald-600/25 border border-emerald-500/50 hover:bg-emerald-600/40 text-[11px] text-emerald-200 font-semibold transition">
+              🧲 Fisica: ON
+            </button>
+            <button onclick="triggerPlayfulImpulse(true)" class="px-2.5 h-7 rounded-lg bg-amber-500/20 border border-amber-500/40 hover:bg-amber-500/35 text-[11px] text-amber-200 font-semibold transition" title="Oppure premi la BARRA SPAZIATRICE!">
+              🌊 Onda (Spazio)
+            </button>
+
+            <div class="h-4 w-[1px] bg-slate-700 mx-0.5 hidden sm:block"></div>
+
+            <button onclick="toggleAllBranches()" class="px-2 h-7 rounded-lg bg-cyan-600/20 border border-cyan-500/40 hover:bg-cyan-600/40 text-[11px] text-cyan-200 font-medium">
+              ± Branch
+            </button>
+            <button onclick="toggleAllLeafNodes()" class="px-2 h-7 rounded-lg bg-purple-600/20 border border-purple-500/40 hover:bg-purple-600/40 text-[11px] text-purple-200 font-medium">
+              ± Dettagli
+            </button>
+          </div>
+
+          <!-- Helper Banner -->
+          <div class="desktop-only absolute top-3 left-1/2 -translate-x-1/2 pointer-events-none bg-slate-900/85 border border-slate-800 px-3.5 py-1 rounded-full text-[11px] text-slate-300 backdrop-blur z-20 hidden lg:block shadow-lg">
+            ⌨️ <strong>Barra Spaziatrice</strong>: Onda Elastica • 🔍 <strong>Zoom / Pan Veloce</strong>: Spinta Fisica sui Nodi • 🏀 <strong>Basket</strong>: Minigioco in angolo
+          </div>
+        </div>
+
+        <!-- VIEW 2: CLINICAL PROTOCOLS & STEP-BY-STEP WORKFLOWS -->
+        <div id="view-practicals" class="w-full h-full overflow-y-auto p-4 sm:p-6 pb-24 hidden select-text">
+          <div class="max-w-6xl mx-auto space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+              <div>
+                <span class="text-xs font-bold uppercase tracking-wider text-cyan-400">Clinical Psychology Protocols • Step-by-Step • Doppio Click per modificare</span>
+                <h2 id="practicals-header-title" class="text-xl sm:text-2xl font-extrabold text-white mt-0.5">Protocolli Clinici & Colloquio (2 Procedure per Modulo)</h2>
+                <p class="text-xs text-slate-400 mt-1">Anamnesi & Malingering, Intervento in Crisi in 7 Fasi (Roberts), Debriefing, Protocollo SPIKES e Values-Based Practice.</p>
+              </div>
+              <div class="flex flex-wrap items-center gap-2 shrink-0">
+                <button onclick="addNewPractical()" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white">
+                  + Nuovo Protocollo
+                </button>
+                <button onclick="toggleAllPracticalSteps(true)" class="px-3 py-2 rounded-xl bg-cyan-600/20 border border-cyan-500/40 text-xs font-semibold text-cyan-200 hover:bg-cyan-600/30">
+                  ➕ Espandi Tutto
+                </button>
+                <button onclick="toggleAllPracticalSteps(false)" class="px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-300 hover:bg-slate-700">
+                  ➖ Chiudi Tutto
+                </button>
+              </div>
+            </div>
+
+            <div id="practical-pills" class="flex flex-wrap gap-2"></div>
+            <div id="practicals-container" class="space-y-6"></div>
+          </div>
+        </div>
+
+        <!-- VIEW 3: DYNAMIC REFERENCE TABLES & APPENDICES -->
+        <div id="view-reference" class="w-full h-full overflow-y-auto p-4 sm:p-6 pb-24 hidden select-text">
+          <div class="max-w-6xl mx-auto space-y-8" id="reference-container"></div>
+        </div>
+
+        <!-- VIEW 4: ANKI EXPORT -->
+        <div id="view-anki" class="w-full h-full overflow-y-auto p-4 sm:p-8 pb-24 hidden select-text">
+          <div class="max-w-4xl mx-auto space-y-6">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <div>
+                  <h2 class="text-xl font-bold text-white">Anki Flashcard Exporter (Capitoli 1–17 + Appendici)</h2>
+                  <p class="text-xs text-slate-400 mt-1">Sincronizzato in tempo reale con tutti i 17 capitoli, le branch e i protocolli clinici.</p>
+                </div>
+                <div class="flex gap-2">
+                  <button onclick="copyAnkiText()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white border border-slate-700">
+                    📋 Copia Tutto
+                  </button>
+                  <button onclick="downloadAnkiFile()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white shadow-lg">
+                    ⬇️ Scarica .txt
+                  </button>
+                </div>
+              </div>
+              <textarea id="anki-output" readonly class="w-full h-[420px] bg-slate-950 border border-slate-800 rounded-xl p-4 mono text-xs text-slate-300 focus:outline-none"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- ====================================================================
+             CORNER BASKETBALL SLINGSHOT MINIGAME WIDGET (TOGGLEABLE ON/OFF)
+             ==================================================================== -->
+        <div id="basket-widget" class="hidden absolute bottom-4 right-4 w-[310px] bg-slate-900/95 backdrop-blur-xl border-2 border-orange-500/50 rounded-2xl shadow-2xl z-40 overflow-hidden select-none">
+          <div class="px-3.5 py-2 bg-gradient-to-r from-orange-600/30 via-amber-600/20 to-slate-900 border-b border-slate-800 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-base">🏀</span>
+              <div>
+                <div class="text-xs font-extrabold text-white tracking-tight">Hoop Slingshot Physics</div>
+                <div class="text-[10px] text-orange-300">Tira indietro la palla e rilascia!</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="bg-slate-950 px-2.5 py-0.5 rounded-lg border border-orange-500/40 text-right">
+                <span class="text-[9px] uppercase text-slate-400 block leading-none">Punti</span>
+                <span id="basket-score" class="text-sm font-extrabold text-orange-400 mono">0</span>
+              </div>
+              <button onclick="toggleBasketMinigame()" class="w-6 h-6 rounded-lg bg-slate-800 hover:bg-rose-900 text-slate-300 hover:text-white text-xs font-bold flex items-center justify-center">✕</button>
+            </div>
+          </div>
+          <div class="relative bg-slate-950 flex items-center justify-center">
+            <canvas id="basket-canvas" width="306" height="340" class="cursor-grab active:cursor-grabbing touch-none"></canvas>
+            <button onclick="resetBasketBall()" class="absolute bottom-2 left-2.5 px-2 py-0.5 rounded bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-[10px] text-slate-400">
+              ↺ Palla al centro
+            </button>
+            <div id="basket-streak" class=" absolute bottom-2 right-2.5 text-[10px] font-bold text-amber-400 mono"></div>
+          </div>
+        </div>
+
+      </main>
+
+      <!-- RIGHT SIDEBAR: INSPECTOR + INTERNAL EDITOR -->
+      <aside id="right-sidebar" class="bg-slate-900/95 border-l border-slate-800 flex flex-col z-20 shrink-0 select-text sidebar-transition" style="width: 385px;">
+        <div id="inspector-content" class="flex-1 overflow-y-auto p-4 space-y-4 pb-20"></div>
+      </aside>
+
+    </div>
+
+    <!-- iOS BOTTOM TAB BAR (Active only in iPhone 16 Pro Max Mode) -->
+    <nav id="mobile-bottom-nav" class="hidden h-16 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800 px-2 items-center justify-around z-50 shrink-0 pb-2">
+      <button onclick="mobileNavAction('map')" class="flex flex-col items-center gap-0.5 text-[10px] font-semibold text-cyan-400">
+        <span class="text-base">🕸️</span><span>Mappa</span>
+      </button>
+      <button onclick="mobileNavAction('chapters')" class="flex flex-col items-center gap-0.5 text-[10px] font-semibold text-slate-400">
+        <span class="text-base">📚</span><span>Capitoli</span>
+      </button>
+      <button onclick="mobileNavAction('inspector')" class="flex flex-col items-center gap-0.5 text-[10px] font-semibold text-slate-400">
+        <span class="text-base">🔍</span><span>Dettagli</span>
+      </button>
+      <button onclick="mobileNavAction('practicals')" class="flex flex-col items-center gap-0.5 text-[10px] font-semibold text-slate-400">
+        <span class="text-base">🛠️</span><span>Protocolli</span>
+      </button>
+      <button onclick="mobileNavAction('reference')" class="flex flex-col items-center gap-0.5 text-[10px] font-semibold text-slate-400">
+        <span class="text-base">📐</span><span>Tabelle</span>
+      </button>
+      <button onclick="toggleBasketMinigame()" class="flex flex-col items-center gap-0.5 text-[10px] font-semibold text-orange-400">
+        <span class="text-base">🏀</span><span>Basket</span>
+      </button>
+    </nav>
+
+    <!-- MODAL: PASTE / IMPORT NEW SUBJECT JSON -->
+    <div id="subject-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 select-text">
+      <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div>
+            <h3 class="text-base font-bold text-white">📥 Importa / Incolla Nuova Materia (JSON)</h3>
+            <p class="text-xs text-slate-400">Incolla qui un oggetto JSON generato per una nuova materia per aggiornare istantaneamente tutta l'app.</p>
+          </div>
+          <button onclick="closeSubjectModal()" class="text-slate-400 hover:text-white text-lg font-bold">✕</button>
+        </div>
+        <textarea id="subject-json-input" placeholder='{"id": "nuova_materia", "appTitle": "...", "chapters": [...], "practicals": [...]}'
+          class="w-full h-72 bg-slate-950 border border-slate-800 rounded-xl p-3 mono text-xs text-slate-200 focus:outline-none focus:border-cyan-500"></textarea>
+        <div class="flex justify-end gap-2">
+          <button onclick="closeSubjectModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300">Annulla</button>
+          <button onclick="applyImportedSubjectJSON()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white">🚀 Carica Materia</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ============================================================================
+    // MEDICAL PSYCHOLOGY COMPLETE CONFIGURATION (CHAPTERS 1–17 + APPENDICES)
+    // ============================================================================
+    const DEFAULT_SUBJECT_CONFIG = {
+      id: "medical_psychology_mu_plovdiv_v4",
+      appTitle: "Medical Psychology — Interactive Atlas",
+      icon: "Ψ",
+      hubBadge: "MU Plovdiv • Stoyanov & Arabadzhiev",
+      hubTitle: "MEDICAL PSYCHOLOGY",
+      clusters: [
+        { id: "foundations", label: "1–4: Fondamenti & Test", color: "#3b82f6" },
+        { id: "clinical", label: "5–8: Comunicazione & Etica", color: "#10b981" },
+        { id: "stress", label: "9–11: Stress, Psicosom. & Burnout", color: "#f59e0b" },
+        { id: "crisis", label: "12–17: Vulnerabili, Crisi & PCM", color: "#ec4899" }
+      ],
+      chapters: [
+        {
+          id: 1,
+          title: "Ch. 1: Mental Systems",
+          subtitle: "Acad. Prof. D. Stoyanov, K. Stoyanova (pp. 5–16, App. 1)",
+          cluster: "foundations",
+          color: "#3b82f6",
+          x: null, y: null,
+          summary: "Struttura e organizzazione della psiche umana come sistemi co-integrati: sistema cognitivo, emotivo, volitivo/conativo e sistema della personalità.",
+          branches: [
+            {
+              name: "Process, State vs Property",
+              items: [
+                "Mental Processes: I più brevi (da frazioni di secondo a poche decine di secondi); riflettono l'ambiente esterno sotto forma di immagini.",
+                "Mental States: Durata intermedia (minuti, ore, giorni) che dà tono all'esperienza psichica.",
+                "Mental Properties: Caratteristiche stabili e durature fissate nell'ontogenesi (temperamento, carattere, intelletto)."
+              ]
+            },
+            {
+              name: "Cognitive & Mediating Processes",
+              items: [
+                "Cognitive Processes: Sensation (Exteroceptive, Interoceptive, Proprioceptive/kinesthetic), Perception, Mental representation, Thinking, Imagination.",
+                "Mediating Processes: Memory e Attention formano un gruppo autonomo perché completano e attualizzano la funzione di ogni altro processo mentale.",
+                "Products of Cognition: Immagini (images) e pensieri (thoughts).",
+                "Operations of Imagination (App. 1): Agglutination, hyperbolization, emphasis/accentuation, reconstruction, schematization, typification, metaphor."
+              ]
+            },
+            {
+              name: "Thinking, Volition & Consciousness",
+              items: [
+                "Thinking based on a strong trait: Gli oggetti sono percepiti e compresi sulla base del loro impatto emotivo.",
+                "Thinking based on an essential trait: Gli oggetti sono riconosciuti in base alle loro caratteristiche intrinseche oggettive.",
+                "Volition (App. 1): Autoregolazione cosciente; funzioni di iniziativa, esecutiva e inibizione (controllo degli impulsi).",
+                "Consciousness (App. 1): Subjectivity, Reflexivity, Transitivity, Selectivity. Secondo K. Mechkov è costituita da Attention + Volition."
+              ]
+            },
+            {
+              name: "Personality System & Abilities (Fig. 1)",
+              items: [
+                "Personality System Hierarchy: Si divide in 1. Knowledge and Abilities, 2. Intellect, 3. Character and Temperament.",
+                "Cognitive vs Operative Abilities: Le abilità cognitive generano un prodotto principalmente intellettuale; quelle operative generano un prodotto pratico frutto di abilità acquisite.",
+                "Learning Styles: Visivo (visual memory sviluppata) vs Cinestetico (apprendimento tramite tatto, azione e movimento)."
+              ]
+            }
+          ]
+        },
+        {
+          id: 2,
+          title: "Ch. 2: Developmental Psychology",
+          subtitle: "R. Madzhurova, T. Ganeva-Vlaseva (pp. 17–31, App. 2)",
+          cluster: "foundations",
+          color: "#3b82f6",
+          x: null, y: null,
+          summary: "Sviluppo umano lungo il ciclo di vita (fisico, sociale, emotivo e cognitivo): eredità vs ambiente, continuità vs stadi e periodi critici.",
+          branches: [
+            {
+              name: "Biological Influences (Appendix 2)",
+              items: [
+                "Material Traces of Behaviour: Il comportamento (atti comportamentali e gesti) è l'unica cosa dimostrabile che lascia tracce materiali oltre la sfera psico-emotiva.",
+                "Cross-Generational Transmission: Il comportamento nella specie è riprodotto e trasmesso di generazione in generazione."
+              ]
+            },
+            {
+              name: "Cognitive & Psychosocial Stages",
+              items: [
+                "Jean Piaget: Stadio sensomotorio (0–2), preoperatorio (2–7), operatorio concreto (7–11) e operatorio formale (11+).",
+                "Erik Erikson (Identity: Youth and Crisis): 8 stadi psicosociali e crisi normative d'età lungo tutto il ciclo di vita (Lifespan development).",
+                "Attachment & Early Stages (Bowlby, Dolto): Base sicura (Secure base), immagine inconscia del corpo e acquisizione dei concetti biologici di base."
+              ]
+            }
+          ]
+        },
+        {
+          id: 3,
+          title: "Ch. 3: Personality Theories",
+          subtitle: "Freud, Jung, Eysenck, MMPI, Maslow & Cloninger (pp. 32–51)",
+          cluster: "foundations",
+          color: "#3b82f6",
+          x: null, y: null,
+          summary: "Cartografia della psiche: approcci nomotetici e idiografici, meccanismi di difesa, tipi psicologici di Jung, profili MMPI e modello psicobiologico.",
+          branches: [
+            {
+              name: "Psychodynamic & Defense Mechanisms",
+              items: [
+                "Psychic Energy Investment (p. 48): L'emergere di tensione tra conscio e inconscio in diversi contesti di vita richiede sempre un investimento di energia psichica.",
+                "Anna Freud (The Ego and the Mechanisms of Defence): Rimozione, proiezione, razionalizzazione, sublimazione, spostamento, negazione, formazione reattiva."
+              ]
+            },
+            {
+              name: "Jung: Psychological Types & Attitude",
+              items: [
+                "Cartography of the Psyche (p. 48): I tipi psicologici mappano la psiche in funzioni (Pensiero, Sentimento, Sensazione, Intuizione) e atteggiamenti (Estroversione/Introversione).",
+                "Attitude Definition: Prontezza (readiness) della psiche ad agire e reagire in un certo modo; deriva da predisposizione innata, educazione, esperienza e idee collettive.",
+                "Early Recognition: L'atteggiamento tipico è riconoscibile già nei bambini piccoli (toddlers), poiché non è formato dalla lotta per l'esistenza."
+              ]
+            },
+            {
+              name: "MMPI Profile, Eysenck, Maslow & Cloninger",
+              items: [
+                "MMPI Interpretation (Fig. 3, p. 40): Distingue Narrow psychological norm, Broad psychological norm e Pathological values.",
+                "MMPI Clinical Rule: I nomi delle scale (es. Hysteria - HY) sono identici ai termini di malattia ma NON equivalenti (un punteggio alto in HY non significa necessariamente disturbo da conversione senza contesto clinico).",
+                "Eysenck (EPI), Maslow (Gerarchia dei bisogni) & Cloninger (Modello psicobiologico di Temperamento e Carattere)."
+              ]
+            }
+          ]
+        },
+        {
+          id: 4,
+          title: "Ch. 4: Methods for Assessment",
+          subtitle: "Acad. Prof. D. Stoyanov, K. Stoyanova (pp. 52–63)",
+          cluster: "foundations",
+          color: "#3b82f6",
+          x: null, y: null,
+          summary: "Metodi clinico-psicologici di valutazione: anamnesi, esplorazione, osservazione, fasi del colloquio e test psicometrici/proiettivi.",
+          branches: [
+            {
+              name: "3 Core Pillars & Anamnesis Structure",
+              items: [
+                "Three Mandatory Pillars (p. 54): I metodi clinici devono comprendere Anamnesis, Exploration e Observation.",
+                "History of Current State: Durata, sviluppo cronologico dei sintomi, comorbilità, invalidità, trattamento applicato (usando self-report del paziente + report di altri).",
+                "Family History (p. 62): Genitori, fratelli, sorelle elencati per età e anno di morte, occupazione, salute fisica/mentale e relazioni."
+              ]
+            },
+            {
+              name: "Interview Conclusional Phase & 2 Areas",
+              items: [
+                "Conclusional Phase (p. 52–54): Raccolta dati standard (età, genere, professione), ringraziamento, verifica consenso su parti condivise e garanzia di riservatezza (etica).",
+                "1. Area of Free Facilitation: Copre argomenti emotivamente neutri per facilitare il dialogo.",
+                "2. Area of Psychodynamic: Include argomenti emotivamente significativi e conflittuali."
+              ]
+            },
+            {
+              name: "Standardized Scales & Projective Tests",
+              items: [
+                "MMSE (Folstein et al., 1975): Mini-Mental State Examination per graduare lo stato cognitivo dei pazienti.",
+                "STAI (Spielberger et al., 1970): State-Trait Anxiety Inventory (ansia di stato vs ansia di tratto).",
+                "Zung Self-Rating Depression Scale (1965): Scala di autovalutazione della depressione.",
+                "Rorschach Inkblot Test (p. 54): Test proiettivo basato sull'interpretazione di macchie d'inchiostro simmetriche."
+              ]
+            }
+          ]
+        },
+        {
+          id: 5,
+          title: "Ch. 5: Communication Theories",
+          subtitle: "Assoc. Prof. Z. Arabadzhiev, S. Tomcheva, E. Mashonova (pp. 64–73)",
+          cluster: "clinical",
+          color: "#10b981",
+          x: null, y: null,
+          summary: "Comunicazione verbale e non verbale come interazione emotiva complessa, codifica/decodifica e verifica della percezione.",
+          branches: [
+            {
+              name: "Verbal, Non-Verbal & Context",
+              items: [
+                "Symbols (p. 64): Scambio di informazioni tramite simboli verbali (speech) e non verbali (body language, writing).",
+                "Emotional Interaction: Non è un mero scambio meccanico di contenuti, ma una complessa interazione emotiva.",
+                "Determinants of Meaning: Il contesto (dà significato all'informazione), cultura, professione, istruzione ed esperienza psicologica accumulata."
+              ]
+            },
+            {
+              name: "Goals, Encoding, Decoding & Synchronicity",
+              items: [
+                "Goal of Communication (p. 68): Può essere significativo (significant) o quotidiano (mundane) e cambiare valutazione nel tempo.",
+                "Encoding vs Decoding (p. 70): Encoding = trasformare pensieri ed emozioni in parole, immagini o comportamenti; Decoding = interpretare l'informazione ricevuta.",
+                "Synchronous Stimuli Rule: Più gli stimoli verbali e non verbali sono sincroni, più è facile e chiaro per il destinatario comprendere accuratamente.",
+                "Perception Checking (p. 182): Condividere la propria esperienza dell'informazione non verbale con l'altro e verificare che corrisponda alla sua intenzione."
+              ]
+            }
+          ]
+        },
+        {
+          id: 6,
+          title: "Ch. 6: Clinical Interview",
+          subtitle: "T. Atanasov, MD, E. Mashonova, MSc (pp. 74–80)",
+          cluster: "clinical",
+          color: "#10b981",
+          x: null, y: null,
+          summary: "Colloquio clinico di valutazione: estrazione di dati comportamentali, oggettività, simulazione (malingering), dissimulazione e sensibilità culturale.",
+          branches: [
+            {
+              name: "Purpose, Cognition & Insight Check",
+              items: [
+                "Vital Evaluation Tool (p. 74): Estrae dati comportamentali, caratteristiche idiosincratiche e reazioni individuali; precede o accompagna sempre i test.",
+                "Cognition & Intelligence Check: Es. contare all'indietro per 7 partendo da 100 (serial sevens).",
+                "Reliability, Judgement & Insight: Valutare se l'intervistato ritiene di avere un problema; l'approccio dipende dalla modalità teorica dello psicologo."
+              ]
+            },
+            {
+              name: "Malingering vs Deception (Dissimulation)",
+              items: [
+                "Objectivity (p. 76): Indica quanto l'informazione sia attendibile o soggettivamente distorta.",
+                "Malingering ('Faking Bad'): Tentativo conscio e deliberato di apparire meno sani / più malati della realtà per evitare pene (es. carcere) o ottenere ricompense (es. pensione d'invalidità).",
+                "Deception / Dissimulation ('Faking Good'): Tentativo conscio e deliberato di apparire migliori o più sani della realtà per ottenere benefici (es. assunzione lavorativa) o non perdere privilegi (es. custodia dei figli)."
+              ]
+            },
+            {
+              name: "Collateral Reports, Docs & LGBTQ+ Rapport",
+              items: [
+                "Collateral Reports: Colloqui con familiari, partner o datori di lavoro per raccogliere informazioni oggettive altrimenti nascoste.",
+                "Documentation: Documenti medici, scolastici, militari o legali per compensare i limiti della memoria.",
+                "Cross-Cultural & Gender/Sexuality Awareness: Condurre il colloquio nella lingua fluente del paziente; la consapevolezza e l'apertura verso la comunità LGBTQ+ aumentano il rapport."
+              ]
+            }
+          ]
+        },
+        {
+          id: 7,
+          title: "Ch. 7: Doctor-Patient & Illness Behavior",
+          subtitle: "Acad. Prof. D. Stoyanov, K. Stoyanova (pp. 81–91)",
+          cluster: "clinical",
+          color: "#10b981",
+          x: null, y: null,
+          summary: "Atteggiamento verso la salute, malattia come 'harmful dysfunction', condizionamento strumentale di Skinner, insight (nosognosia) e pattern comportamentali.",
+          branches: [
+            {
+              name: "Realistic Health Attitude (pp. 81–82)",
+              items: [
+                "Determinants: Temperamento, carattere, educazione precoce, esperienze di malattia, convinzioni religiose e fiducia nella medicina.",
+                "Realistic Attitude Profile: Identifica con calma e precisione i segnali negativi del corpo, cerca tempestivamente cure mediche, spiega i sintomi in modo obiettivo senza esagerare o minimizzare e abbandona le abitudini nocive."
+              ]
+            },
+            {
+              name: "Biopsychosocial Disease & Skinner Conditioning",
+              items: [
+                "Disease as 'Harmful Dysfunction' (p. 84): Associata a dolore, sofferenza e relazioni interrotte; comprende dimensioni Cognitive, Esperienziali e Comportamentali.",
+                "Classical vs Operant/Instrumental Conditioning (Fig. 1–2, p. 85): Il comportamento di malattia viene assorbito nell'infanzia per prove ed errori (premi e punizioni dei genitori) e riprodotto da adulti per ottenere 'dividendi' sociali.",
+                "Reinforcement: Il supporto ai meccanismi comportamentali appresi è chiamato rinforzo (reinforcement)."
+              ]
+            },
+            {
+              name: "Insight (Nosognosia) & Illness Patterns",
+              items: [
+                "Insight / Nosognosia (p. 86): La consapevolezza di malattia (un tempo chiamata nosognosia) include l'Intellectual insight (comprensione cognitiva della malattia) ed emotivo.",
+                "Balanced, Calm and Patient Behavior (p. 88): Paziente collaborativo, comunica efficacemente e partecipa al trattamento.",
+                "Agitated, Anxious Behavior (p. 88): Eccessiva loquacità, richiesta continua di spiegazioni, vanità, lamentele persistenti; incapacità di considerare i bisogni e la sofferenza altrui."
+              ]
+            }
+          ]
+        },
+        {
+          id: 8,
+          title: "Ch. 8: Iatrogenesis, Placebo & Ethics",
+          subtitle: "Andriana Kakanakova, MD, PhD (pp. 92–96)",
+          cluster: "clinical",
+          color: "#10b981",
+          x: null, y: null,
+          summary: "Iatrogenesi ('causato dal guaritore'), effetto placebo/nocebo, eutanasia e teoria del consenso informato.",
+          branches: [
+            {
+              name: "Iatrogenesis ('Caused by the Healer')",
+              items: [
+                "Definition (p. 92): Qualsiasi effetto negativo sullo stato del paziente causato dalle azioni o dalla mancata azione (omissione) dei professionisti sanitari coinvolti nella cura.",
+                "Etymology & Shipkovenski: Parola di origine greca che significa 'causato dal guaritore' (studiata da N. Shipkovenski in contrapposizione alla psicoterapia liberatoria)."
+              ]
+            },
+            {
+              name: "Placebo, Euthanasia & Informed Consent",
+              items: [
+                "Placebo Mechanism (Evans, 1998): Risposta terapeutica positiva mediata dalle aspettative del paziente e dalla fiducia nel medico.",
+                "Informed Consent (Faden & Beauchamp, 1986): Tutela dell'autonomia decisionale del paziente tramite informazione completa, comprensione e volontarietà.",
+                "Euthanasia: Aspetti etici, deontologici, legali e psicologici del fine vita."
+              ]
+            }
+          ]
+        },
+        {
+          id: 9,
+          title: "Ch. 9: Stress and Theory of Stress",
+          subtitle: "Distress, Eventi di Vita & Adattamento (pp. 97–105)",
+          cluster: "stress",
+          color: "#f59e0b",
+          x: null, y: null,
+          summary: "Fisiologia e psicologia dello stress: sindrome generale di adattamento, distress emotivo ed eventi di vita desiderabili vs indesiderabili.",
+          branches: [
+            {
+              name: "Distress & Emotional Pain (p. 103–104)",
+              items: [
+                "Distress Definition: Stato di dolore emotivo, sofferenza o disagio che si verifica in risposta a vari stressor o eventi di vita avversi.",
+                "Manifestations: Termine ampio che copre stati emotivi negativi quali ansia, tristezza, insoddisfazione e disagio; causato sia da fattori acuti che cronici."
+              ]
+            },
+            {
+              name: "Life Events & Health Impact",
+              items: [
+                "Chronic Stress Impact: Sebbene un certo grado di stress sia normale, lo stress cronico o eccessivo produce effetti patogeni sulla salute mentale e fisica.",
+                "Desirable vs Undesirable Life Events (Vinokur & Selzer, 1975): Relazione tra eventi di vita stressanti e insorgenza di patologie mentali e somatiche."
+              ]
+            }
+          ]
+        },
+        {
+          id: 10,
+          title: "Ch. 10: Theory of Psychosomatics",
+          subtitle: "Assoc. Prof. Z. Arabadzhiev, S. Tomcheva, E. Mashonova (pp. 106–115)",
+          cluster: "stress",
+          color: "#f59e0b",
+          x: null, y: null,
+          summary: "Relazione tra fattori psicologici/comportamentali e malattie somatiche: disturbi psicosomatici, somatopsichici e profili specifici d'organo.",
+          branches: [
+            {
+              name: "Psychosomatic vs Somatopsychic (p. 110)",
+              items: [
+                "Psychosomatic Symptoms: Appaiono somatici ma derivano da fattori psicologici, come nella paralisi da conversione (conversion paralysis) e nel disturbo da somatizzazione.",
+                "Somatopsychic Manifestations: Malattie somatiche che si manifestano con cambiamenti comportamentali e sintomi mentali (carenze vitaminiche, traumi cranici, intossicazioni, malattie oncologiche ed endocrine).",
+                "Somatic Diseases Worsened by Psychology: Ulcera peptica, ipertensione, cardiopatia ischemica (CHD), herpes zoster, cefalee (Franz Alexander, 1950)."
+              ]
+            },
+            {
+              name: "Cardiovascular Psychosomatics (p. 110)",
+              items: [
+                "Ischemic Heart Disease & Arrhythmias: Personalità di Tipo A, aggressività, irritabilità, bassa soglia di frustrazione; morte cardiaca improvvisa da aritmia ventricolare in seguito a shock psicologico massivo.",
+                "Arterial Hypertension: Lo stress severo aumenta la norepinefrina e la pressione sistolica; tipica di chi reprime la rabbia e prova senso di colpa, bisogno cronico di tenerezza/riconoscimento dalle autorità, bisogno inconscio di dipendenza infantile e frustrazione orale trasformata in aggressività orale repressa dal Super-Io.",
+                "Syncope & Hypotension: Riflesso vasovagale accompagnato da ansia o paura (crollo pressorio, pallore, svenimento) in pazienti con sistema nervoso autonomo iperattivo."
+              ]
+            },
+            {
+              name: "Autoimmune & Skin Neurodermatitis (p. 110–114)",
+              items: [
+                "Autoimmune Processes: Lo stress severo può innescare artrite reumatoide, lupus eritematoso sistemico; stress cronico, rabbia o depressione ne peggiorano il decorso.",
+                "Skin Neurodermatitis (p. 114): Sviluppo di eczema dopo lutti o separazioni, conflitti sessuali e rabbia repressa. La pelle è lo 'specchio dello stato emotivo dell'individuo'; pazienti timidi, insicuri, chiusi che rielaborano dolorosamente l'incapacità di esteriorizzare le emozioni."
+              ]
+            }
+          ]
+        },
+        {
+          id: 11,
+          title: "Ch. 11: Work, Climate & Burnout",
+          subtitle: "Acad. Prof. D. Stoyanov, K. Stoyanova (pp. 116–125)",
+          cluster: "stress",
+          color: "#f59e0b",
+          x: null, y: null,
+          summary: "Psicologia del lavoro, clima psicologico nelle strutture sanitarie e sindrome del burnout nei medici.",
+          branches: [
+            {
+              name: "Work & Love (Tolstoy & Freud, p. 116)",
+              items: [
+                "Leo Tolstoy Quote: 'Si può vivere magnificamente in questo mondo se si sa come lavorare e come amare, lavorare per chi si ama e amare il proprio lavoro.'",
+                "Sigmund Freud Quote: 'L'amore e il lavoro sono le pietre angolari della nostra umanità (cornerstones of our humanness).'"
+              ]
+            },
+            {
+              name: "Workplace Climate & Medical Burnout",
+              items: [
+                "Psychological Climate at Workplace (p. 116–118): Fattori psicologici che creano un ambiente sociale positivo di interazione nel lavoro sanitario.",
+                "Consequences of Burnout: I rischi ambientali interni al lavoro medico sono fortemente associati allo sviluppo di burnout professionale e, di conseguenza, a un trattamento insufficientemente umano e attento dei pazienti."
+              ]
+            }
+          ]
+        },
+        {
+          id: 12,
+          title: "Ch. 12: Vulnerable Groups in Medicine",
+          subtitle: "Assoc. Prof. Z. Arabadzhiev, S. Tomcheva, E. Mashonova (pp. 126–135, App. 9)",
+          cluster: "crisis",
+          color: "#ec4899",
+          x: null, y: null,
+          summary: "Supporto psicologico individualizzato per gruppi vulnerabili: disabili, bambini/adolescenti, migranti/rifugiati e anziani con polimorbilità.",
+          branches: [
+            {
+              name: "4 Risk Factors & Adults with Disabilities",
+              items: [
+                "4 Endangering Factors (p. 126): Fattori sociali, economici, medici e culturali che mettono a rischio la qualità delle cure.",
+                "Social Integration (p. 126–128): Obbligatorio inserire gli adulti con disabilità nel sistema di patronato sociale (social patronage system), gruppi di mutuo aiuto, sport, formazione a distanza.",
+                "Intellectual Disability (App. 9, p. 181): Deficit intellettivo, suggestionabilità, manipolabilità -> usare linguaggio comprensibile e accessibile, training di abilità sociali/vita indipendente e protezione dagli abusi."
+              ]
+            },
+            {
+              name: "Children, Adolescents & Healthy Siblings",
+              items: [
+                "Symptom of Family Dynamic (App. 9): I bambini/adolescenti sono spesso il 'sintomo' della dinamica familiare; approccio basato su onestà, uguaglianza, gioco/arte (Play Therapy di Landreth) e lavoro con l'intera famiglia.",
+                "Healthy Siblings Deprivation (p. 130): Quando c'è un bambino malato, gli altri fratelli sani (se presenti) spesso non riescono a sperimentare l'amore genitoriale di cui hanno bisogno."
+              ]
+            },
+            {
+              name: "Migrants/Refugees & Elderly Patients",
+              items: [
+                "Culturally Sensitive Approach (p. 130): La norma dipende dal contesto culturale (es. credere nella magia e negli spiriti maligni può essere normale in una cultura e non psicopatologia); se il rifiuto religioso mette a rischio la vita, si passa alla custodia medica (medical custody).",
+                "Elderly & Polymorbidity (p. 130–132): Evitare l'ageismo; gli anziani conservano gran parte del potenziale (es. crystallized intelligence) e desiderano sentirsi utili e 'far sentire la propria parola'. Gestire la Polymorbidity (diagnosi multiple e interazioni farmacologiche)."
+              ]
+            }
+          ]
+        },
+        {
+          id: 13,
+          title: "Ch. 13: Late Adulthood, Grief & Death",
+          subtitle: "Concetto di Morte, Lutto & Spiritualità (pp. 136–146, p. 194)",
+          cluster: "crisis",
+          color: "#ec4899",
+          x: null, y: null,
+          summary: "Sviluppo cognitivo del concetto di morte, elaborazione del lutto (Grief Counselling di Worden) e ruolo protettivo della spiritualità e della cultura nel fine vita.",
+          branches: [
+            {
+              name: "Development of the Concept of Death (p. 142)",
+              items: [
+                "Biological Prerequisite: Per sviluppare il concetto di morte è necessario aver acquisito nell'infanzia i concetti biologici di base sulle parti del corpo degli organismi viventi e le loro funzioni vitali.",
+                "Categorical Transformation: È necessario distruggere la categoria globale di 'inanimato' trasformandola in 'morto, inanimato, irreale e inesistente' (raggiunto solitamente nell'infanzia)."
+              ]
+            },
+            {
+              name: "Spirituality, Religion & Culture (p. 194)",
+              items: [
+                "End-of-Life Protection: Il senso di spiritualità, l'appartenenza religiosa e una cultura in cui la morte è riconosciuta e discussa apertamente riducono la paura del processo del morire e della morte, portando a minore disperazione (less despair) alla fine della vita."
+              ]
+            }
+          ]
+        },
+        {
+          id: 14,
+          title: "Ch. 14: Psychotherapy",
+          subtitle: "Modalità Psicoterapiche & Pensieri Automatici (pp. 147–153, App. 14)",
+          cluster: "crisis",
+          color: "#a855f7",
+          x: null, y: null,
+          summary: "Dichiarazione di Strasburgo (1990), flusso cognitivo e pensieri automatici maladattivi (Beck), Gestalt (Perls) e modalità psicodinamiche.",
+          branches: [
+            {
+              name: "Cognitive Flow & Automatic Thoughts (p. 152)",
+              items: [
+                "Biased Observations to Axioms: Osservazioni inaccurate generano 'ipotesi' vaghe e generalizzazioni errate che non subiscono scrutinio critico e vengono percepite come assiomi.",
+                "Maladaptive Cognitions (Aaron Beck): Formano misconcezioni sul mondo, su sé stessi e sugli altri chiamate cognizioni maladattive o pensieri automatici (automatic thoughts).",
+                "Strasbourg Declaration (EAP, 1990): Riconosce la psicoterapia come disciplina scientifica autonoma."
+              ]
+            },
+            {
+              name: "Psychodynamic Modalities (Appendix 14, p. 200)",
+              items: [
+                "Unconscious Dynamic Forces: La prospettiva presente si è formata nel passato; l'insight nelle forze dinamiche inconsce permette il cambiamento di personalità e comportamento.",
+                "3 Stages of Symptoms: 1. Conflitto irrisolto, 2. Tentativo di repressione/soppressione, 3. Attualizzazione del conflitto in forma mascherata come sintomo o tratto di personalità.",
+                "Sources & Techniques: Relazione con il caregiver precoce, transfert, resistenze; analisi dei sogni e libere associazioni."
+              ]
+            }
+          ]
+        },
+        {
+          id: 15,
+          title: "Ch. 15: Crises & Crisis Interventions",
+          subtitle: "S. Tomcheva, Assoc. Prof. Z. Arabadzhiev, E. Mashonova (pp. 154–164, App. 16)",
+          cluster: "crisis",
+          color: "#ec4899",
+          x: null, y: null,
+          summary: "Fasi dell'intervento in crisi, ritiro dello stato mentale, valutazione del rischio suicidario e protocollo in 7 stadi (Planning & Tracking).",
+          branches: [
+            {
+              name: "5 Debriefing Phases & Mental Status (p. 154, 162)",
+              items: [
+                "5 Sequential Diagram Phases (p. 154): 1. Facts -> 2. Thoughts -> 3. Feelings -> 4. Symptoms -> 5. Training phase.",
+                "Withdrawal of Mental Status (p. 162): Contatto, coscienza, emozioni, volontà, controllo degli impulsi, aspetto, psicomotricità, pensiero, linguaggio, memoria, attenzione, intelletto, sfera edonica, criticità.",
+                "Client Attitude to Specialist: Cooperative, non-cooperative, oppositional, avoidant, aggressive, suspicious, defensive, friendly, seductive, critical."
+              ]
+            },
+            {
+              name: "Stage 6 (Planning) & Stage 7 (Tracking) (p. 204)",
+              items: [
+                "Stage 6 Planning (p. 204): Piano d'azione strutturato, coinvolgere persone significative per ridurre l'isolamento, monitorare comportamento suicidario e rimuovere oggetti pericolosi, eventuale ospedalizzazione/farmacoterapia e valutazione cognitiva rapida in 7 domande.",
+                "Stage 7 Tracking (p. 204): Monitoraggio periodico post-crisi di sonno, alimentazione e igiene, comprensione cognitiva di cosa e perché è successo, funzionamento sociale/spirituale/culturale/professionale, soddisfazione per la terapia (biologica o psicologica) e valutazione degli stressor attuali e del comportamento suicidario."
+              ]
+            }
+          ]
+        },
+        {
+          id: 16,
+          title: "Ch. 16: Breaking the Bad News",
+          subtitle: "Protocollo SPIKES di Baile & Buckman (pp. 165–171)",
+          cluster: "crisis",
+          color: "#ec4899",
+          x: null, y: null,
+          summary: "Comunicazione delle cattive notizie in medicina e oncologia attraverso il protocollo strutturato a 6 step SPIKES.",
+          branches: [
+            {
+              name: "SPIKES 6-Step Protocol (p. 170)",
+              items: [
+                "S – Setting up the interview: Garantire privacy, coinvolgere i familiari se desiderato, sedersi, contatto visivo.",
+                "P – Perception: Valutare cosa il paziente sa o sospetta già della propria condizione medica.",
+                "I – Invitation: Chiedere quanto dettaglio informativo il paziente desidera ricevere.",
+                "K – Knowledge: Dare un 'warning shot' e comunicare la diagnosi a piccoli passi senza gergo tecnico.",
+                "E – Emotions: Osservare, riconoscere e validare con empatia le reazioni emotive del paziente.",
+                "S – Strategy and Summary: Condividere il piano terapeutico e riassumere i passi successivi."
+              ]
+            }
+          ]
+        },
+        {
+          id: 17,
+          title: "Ch. 17: Person-Centered & Values-Based Medicine",
+          subtitle: "Acad. Prof. D. Stoyanov, K. Stoyanova (pp. 172–179)",
+          cluster: "crisis",
+          color: "#a855f7",
+          x: null, y: null,
+          summary: "Superamento della disumanizzazione biomedica: Medicina Centrata sulla Persona (PCM), metodi qualitativi e Values-Based Practice (Fulford).",
+          branches: [
+            {
+              name: "Holistic Care & Qualitative Methods (pp. 172–174)",
+              items: [
+                "Dehumanization Risk (p. 172): Il focus esclusivo sulla diagnosi biologica frammenta la malattia nei suoi meccanismi e fa perdere l'approccio olistico alla persona che soffre (citazione di Voltaire).",
+                "Qualitative vs Quantitative Methods (p. 174): I metodi qualitativi indagano il significato soggettivo che le persone attribuiscono a credenze, valori, preferenze e simboli, analizzando sia il contenuto che il processo (non verbale) della comunicazione."
+              ]
+            },
+            {
+              name: "PCM Curriculum (Part I & Part II, pp. 174–176)",
+              items: [
+                "Part I (Philosophical Aspects): Epistemologia medica (fatti e valori, dicotomia di Windelband), problema psicofisico/psicosomatico, validità/affidabilità/specificità/sensibilità, 10 principi di Fulford.",
+                "Part II (Communicative & Clinical): Modello psicobiologico di Cloninger, meccanismi di difesa, personalità e valori come determinanti del comportamento, contesto socio-culturale/religioso, transfert e controtransfert nella comunicazione, adattamento e anticipazione, motivazione, gestione dello stress e burnout."
+              ]
+            },
+            {
+              name: "Guiding Premise & Clinical Skills of VBP (pp. 176–178)",
+              items: [
+                "Guiding Premise of PCM (p. 176): Comprendere i limiti della conoscenza biomedica e il fatto che pratichiamo la professione medica in condizioni di incertezza.",
+                "Patient-Centred & Multidisciplinary: 1. La prima fonte di informazione sui valori in ogni decisione è la prospettiva del paziente/famiglia; 2. I diversi valori del team multidisciplinare bilanciano le differenze.",
+                "Key Clinical Skills of Values-Based Practice (p. 178): Awareness (consapevolezza dei diversi valori), Reasoning skills (esplorare le differenze di valore), Knowledge (conoscenza dei valori rilevanti) e Communication skills."
+              ]
+            }
+          ]
+        }
+      ],
+      practicals: [
+        {
+          id: "P1",
+          number: "Protocollo #1",
+          title: "Valutazione Psicologica Clinica & Colloquio Diagnostico (Ch. 4 & Ch. 6)",
+          focus: "Conduzione strutturata dell'anamnesi clinica e riconoscimento delle distorsioni intenzionali (Malingering vs Dissimulation).",
+          preparations: [
+            {
+              code: "Proc 1A",
+              tooth: "Ch. 4 (pp. 52–62)",
+              name: "Struttura dell'Anamnesi, Esplorazione e Chiusura del Colloquio",
+              burSet: "Self-report del paziente, Report dei familiari, Test MMSE / STAI / Zung / Rorschach",
+              steps: [
+                { stage: "1. Area of Free Facilitation", detail: "Iniziare il colloquio con argomenti emotivamente neutri per instaurare il contatto psicologico e ridurre la tensione." },
+                { stage: "2. Area of Psychodynamic", detail: "Esplorare i temi emotivamente significativi e le dinamiche conflittuali profonde." },
+                { stage: "3. History of the Current State", detail: "Raccogliere durata, sviluppo cronologico dei sintomi, comorbilità, grado di invalidità e trattamenti già applicati." },
+                { stage: "4. Family History", detail: "Mappare genitori, fratelli e sorelle (età, eventuale anno di morte, occupazione, salute fisica/mentale e qualità delle relazioni)." },
+                { stage: "5. Conclusional Phase", detail: "Raccogliere i dati standard, ringraziare il paziente, verificare se vi sono parti che non desidera includere e garantire formalmente la riservatezza." }
+              ]
+            },
+            {
+              code: "Proc 1B",
+              tooth: "Ch. 6 (pp. 74–76)",
+              name: "Valutazione di Oggettività, Malingering e Dissimulazione nel Colloquio",
+              burSet: "Serial Sevens (100 - 7), Collateral Reports, Documentazione Storica",
+              steps: [
+                { stage: "1. Cognition, Judgement & Insight", detail: "Testare attenzione e calcolo (es. contare all'indietro per 7 da 100) e verificare se il paziente riconosce di avere un problema (insight)." },
+                { stage: "2. Screening per Malingering ('Faking Bad')", detail: "Individuare tentativi consci e deliberati di apparire più malati del reale per evitare sanzioni legali (carcere) o ottenere pensioni/indennizzi." },
+                { stage: "3. Screening per Deception / Dissimulation ('Faking Good')", detail: "Individuare tentativi consci di apparire più sani del reale per ottenere un impiego o non perdere privilegi (es. affidamento dei figli)." },
+                { stage: "4. Incrocio con Collateral Reports & Documentation", detail: "Intervistare familiari, partner o datori di lavoro e verificare cartelle mediche, scolastiche, militari o legali." }
+              ]
+            }
+          ]
+        },
+        {
+          id: "P2",
+          number: "Protocollo #2",
+          title: "Intervento in Crisi, Debriefing & Follow-Up Post-Crisi (Ch. 15 & App. 16)",
+          focus: "Gestione operativa del paziente acuto in crisi, valutazione del rischio suicidario e pianificazione in 7 stadi.",
+          preparations: [
+            {
+              code: "Proc 2A",
+              tooth: "Ch. 15 (pp. 154–162)",
+              name: "Debriefing Psicologico in 5 Fasi & Ritiro dello Stato Mentale",
+              burSet: "Colloquio con informatori, Griglia Mental Status, Domande guida tattiche",
+              steps: [
+                { stage: "1. Raccolta Preliminare dagli Informatori", detail: "Informarsi prima dell'incontro su cosa è accaduto, comportamento attuale, storia psichiatrica, rete di supporto e persistenza del fattore precipitante." },
+                { stage: "2. Sequenza Debriefing (5 Fasi)", detail: "Guidare l'elaborazione attraverso: 1. Facts (fatti oggettivi) -> 2. Thoughts (pensieri) -> 3. Feelings (sentimenti) -> 4. Symptoms (sintomi) -> 5. Training phase." },
+                { stage: "3. Withdrawal of Mental Status", detail: "Valutare contatto, coscienza, emozioni, volontà, controllo impulsi, psicomotricità, pensiero, linguaggio, memoria, attenzione, intelletto e criticità." },
+                { stage: "4. Analisi dell'Atteggiamento verso lo Specialista", detail: "Osservare se il cliente è cooperativo, oppositivo, evitante, aggressivo, sospettoso, difensivo, seduttivo o critico, mantenendo calma ed empatia." }
+              ]
+            },
+            {
+              code: "Proc 2B",
+              tooth: "Appendix 16 (p. 204)",
+              name: "Stage 6 (Planning) & Stage 7 (Tracking) nel Protocollo di Crisi",
+              burSet: "Piano d'azione scritto, Rete familiare, Valutazione rapida in 7 domande",
+              steps: [
+                { stage: "1. Sicurezza e Rimozione Mezzi Letali (Stage 6)", detail: "Coinvolgere familiari/partner per monitorare il comportamento suicidario, rimuovere oggetti pericolosi dall'ambiente e ridurre l'isolamento (valutare ricovero/farmaci se agitazione severa)." },
+                { stage: "2. Rapid Cognitive Assessment (7 Domande Chiave)", detail: "Chiarire: 1. Perché è successo? 2. Cosa significa per l'individuo? 3. Qual è la capacità emotiva di comprensione? 4. Chi era coinvolto? 5. Come confligge con le aspettative? 6. Qual è la risposta (cognitiva/emotiva/comportamentale)? 7. Quali alternative realistiche esistono?" },
+                { stage: "3. Monitoraggio Post-Crisi (Stage 7 Tracking)", detail: "Fissare data e ora del follow-up per valutare: sonno, alimentazione, igiene, comprensione cognitiva, funzionamento sociale/spirituale/culturale/lavorativo, soddisfazione terapeutica e rischio suicidario residuo." }
+              ]
+            }
+          ]
+        },
+        {
+          id: "P3",
+          number: "Protocollo #3",
+          title: "Comunicazione di Cattive Notizie (SPIKES) & Gruppi Vulnerabili (Ch. 12 & Ch. 16)",
+          focus: "Consegna strutturata di diagnosi infauste e adattamento clinico-culturale per popolazioni fragili.",
+          preparations: [
+            {
+              code: "Proc 3A",
+              tooth: "Ch. 16 (pp. 165–170)",
+              name: "Protocollo SPIKES in 6 Step (Baile & Buckman, 2000)",
+              burSet: "Stanza riservata, Comunicazione non verbale empatica, Piano terapeutico",
+              steps: [
+                { stage: "1. S – Setting up the Interview", detail: "Predisporre privacy, far sedere il paziente, coinvolgere i familiari desiderati, stabilire contatto visivo e azzerare le interruzioni." },
+                { stage: "2. P – Assessing Patient's Perception", detail: "Chiedere cosa il paziente sa già della propria condizione prima di parlare ('Cosa le è stato detto finora?')." },
+                { stage: "3. I – Obtaining Patient's Invitation", detail: "Verificare quante informazioni e dettagli diagnostici/prognostici il paziente desidera ricevere." },
+                { stage: "4. K – Giving Knowledge and Information", detail: "Dare un preavviso ('Purtroppo non ho buone notizie'), usare linguaggio chiaro privo di tecnicismi e fornire i dati a piccoli passi." },
+                { stage: "5. E – Addressing Emotions with Empathy", detail: "Osservare la reazione emotiva (silenzio, pianto, shock), nominare l'emozione e validarla empaticamente." },
+                { stage: "6. S – Strategy and Summary", detail: "Riassumere il quadro e concordare un piano d'azione terapeutico condiviso per ridurre l'incertezza." }
+              ]
+            },
+            {
+              code: "Proc 3B",
+              tooth: "Ch. 12 & App. 9 (pp. 126–132, 181)",
+              name: "Approccio Clinico per Disabili, Bambini, Migranti e Anziani",
+              burSet: "Social Patronage System, Play/Art Therapy, Mediazione Culturale",
+              steps: [
+                { stage: "1. Adulti con Disabilità Fisica o Intellettiva", detail: "Introdurre obbligatoriamente nel sistema di patronato sociale e gruppi di mutuo aiuto; per disabilità intellettiva usare linguaggio accessibile e proteggere da abusi/manipolazioni." },
+                { stage: "2. Bambini, Adolescenti e Fratelli Sani", detail: "Trattare il bambino con onestà, uguaglianza, gioco e arte coinvolgendo l'intera famiglia, ricordando di tutelare anche i fratelli sani che rischiano carenza di affetto genitoriale." },
+                { stage: "3. Migranti e Rifugiati", detail: "Rispettare le norme culturali/religiose (distinguendo credenze culturali dalla psicopatologia); attivare la custodia medica (medical custody) se il rifiuto delle cure mette in pericolo la vita." },
+                { stage: "4. Pazienti Anziani", detail: "Contrastare l'ageismo, valorizzare l'intelligenza cristallizzata e il bisogno di essere ascoltati, e bilanciare attentamente la polimorbilità." }
+              ]
+            }
+          ]
+        },
+        {
+          id: "P4",
+          number: "Protocollo #4",
+          title: "Formulazione Psicoterapica & Medicina Basata sui Valori (Ch. 14 & Ch. 17)",
+          focus: "Ristrutturazione delle cognizioni maladattive, lettura psicodinamica del sintomo e processo decisionale Person-Centered.",
+          preparations: [
+            {
+              code: "Proc 4A",
+              tooth: "Ch. 14 & App. 14 (pp. 152, 200)",
+              name: "Analisi Psicodinamica in 3 Stadi & Scrutinio dei Pensieri Automatici",
+              burSet: "Libere associazioni, Analisi del transfert, Esame critico delle ipotesi cognitive",
+              steps: [
+                { stage: "1. Identificazione dei 3 Stadi Psicodinamici del Sintomo", detail: "Rintracciare: 1. Conflitto inconscio irrisolto formato nel passato -> 2. Tentativo di soppressione -> 3. Attualizzazione mascherata come sintomo o tratto caratteriale." },
+                { stage: "2. Analisi di Transfert e Resistenze", detail: "Utilizzare la relazione con il terapeuta, le libere associazioni e l'analisi dei sogni per generare insight." },
+                { stage: "3. Scrutinio Critico del Flusso Cognitivo (CBT)", detail: "Individuare le osservazioni distorte e le ipotesi vaghe accettate acriticamente come assiomi (pensieri automatici maladattivi) e sottoporle a verifica di realtà." }
+              ]
+            },
+            {
+              code: "Proc 4B",
+              tooth: "Ch. 17 (pp. 172–178)",
+              name: "Values-Based Health Practice (Fulford) & Approccio Person-Centered",
+              burSet: "Metodi qualitativi, 4 Clinical Skills di VBP, Team Multidisciplinare",
+              steps: [
+                { stage: "1. Riconoscimento dell'Incertezza Biomedica", detail: "Integrare la medicina basata sulle evidenze (EBM) con i valori soggettivi della persona per prevenire la disumanizzazione." },
+                { stage: "2. Prospettiva Patient-Centred (Prima Fonte)", detail: "Raccogliere come prima fonte decisionale i valori, le credenze e le preferenze del paziente e della sua famiglia tramite ascolto qualitativo e non verbale." },
+                { stage: "3. Applicazione delle 4 Abilità Cliniche VBP", detail: "Esercitare: 1. Awareness (consapevolezza dei valori in gioco), 2. Reasoning skills (esplorazione delle differenze), 3. Knowledge (conoscenza dei valori rilevanti), 4. Communication skills." },
+                { stage: "4. Bilanciamento Multidisciplinare", detail: "Utilizzare la diversità di prospettive all'interno del team multidisciplinare per risolvere in modo equilibrato i conflitti di valore." }
+              ]
+            }
+          ]
+        }
+      ],
+      referenceTables: [
+        {
+          title: "1. Appendix 1 (pp. 180–181): Mental Processes — Characteristics & Functions",
+          headers: ["Mental Process", "Characteristics & Modalities", "Core Psychological & Clinical Functions"],
+          rows: [
+            ["Sensation", "Modalities: vision, hearing, smell, taste, touch. Exteroceptive (visual, auditory, gustatory, olfactory, tactile, thermal), Interoceptive (equilibrium, thirst, hunger, cheerfulness, fatigue, shortness of breath), Proprioceptive/kinesthetic (movement and position of the body in space).", "Construction of primary mental images under direct sensory stimulation; process of obtaining both subjective and objective information."],
+            ["Perception", "Apperception. Field of perception - figure and background. Perception scheme: receptors, afferent neural networks, cerebral cortex areas. Types: shape, movement, time, size and volume of objects.", "Cognitive (perceptual) process of searching for objects in space and collecting sensory data."],
+            ["Mental representation", "Types of representations depending on the analytical system: visual, gustatory, motor, visual-motor, visual-spatial, etc.", "Building a relatively new mental representation. Reflection of spatial relations (data)."],
+            ["Attention (Mediating)", "Properties: volume, concentration, fluctuations, flexibility (switching), persistence, distribution, selectivity, intensity. Alert detection and vigilance. Search. Selective attention. Divided attention.", "A mediating process of active processing (conscious and unconscious) of a limited amount of sensory and remembered information. Concentration of consciousness on significant objects."],
+            ["Imagination", "Active and passive imagination; creation of fantasy images. Operations: agglutination, hyperbolization, emphasis/accentuation, reconstruction, schematization, typification, metaphor.", "Thinking in conditions of information deficit with memory co-participation; creative transformation of reality (active-real and active-unreal images)."],
+            ["Memory (Mediating)", "Dynamics: reorganization and reminiscence of memory traces. Characteristics: fixation, retention, reproduction, forgetting. Types: sensory, long-term, short-term; verbal (declarative) vs non-verbal (procedural); implicit vs explicit.", "Storage and actualisation of acquired cognitive and emotional experience; participates in all mental processes."]
+          ]
+        },
+        {
+          title: "2. Chapter 6 (p. 76): Clinical Assessment Interview — Key Evaluation Factors",
+          headers: ["Factor / Dimension", "Clinical Definition & Mechanism", "Practical Examples in Medical Psychology"],
+          rows: [
+            ["Objectivity", "Concerns how much the shared information can be trusted or is subjectively distorted.", "Cross-checking patient self-report against clinical observation."],
+            ["Malingering ('Faking Bad')", "Conscious and deliberate attempt to appear less healthy or more ill than reality.", "Avoiding penalty of past actions (e.g., avoid jail) or gaining recompense (e.g., health pension)."],
+            ["Deception / Dissimulation ('Faking Good')", "Conscious and deliberate attempt to appear better or healthier than reality.", "Gaining a benefit (e.g., getting employed) or avoiding losing a privilege (e.g., child custody)."],
+            ["Cross-Cultural Context", "Obtaining reliable results adjusted to the interviewee's culture and fluent language.", "Evaluating whether behaviours are normal or abnormal within the patient's cultural, societal, and religious norms."],
+            ["Gender and Sexuality Awareness", "Awareness of social, gender, and sexual circumstances or differences between interviewer and patient.", "Medical issues (STI history) or relationship disharmony; openness to the LGBTQ+ community increases rapport."],
+            ["Collateral Reports & Documentation", "Interviews with family, significant others, or employers + medical, scholar, military, or legal records.", "Compensates for unreliable memory and collects objective facts hidden by subjective point of view."]
+          ]
+        },
+        {
+          title: "3. Chapter 10 (pp. 110–114): Psychosomatic Diseases by Organ System",
+          headers: ["System / Organ", "Clinical Pathology", "Psychological Profile, Triggers & Psychodynamic Mechanism"],
+          rows: [
+            ["Cardiovascular System", "Rhythm disturbances & Ischemic Heart Disease (CHD)", "Type A personality, aggressiveness, irritability, low frustration threshold. Arrhythmia common in anxiety. Sudden cardiac death in ventricular arrhythmia after massive psychological shock."],
+            ["Cardiovascular System", "Arterial Hypertension", "Severe stress -> increased norepinephrine -> raised systolic BP. Common in people who suppress anger and feel guilt over aggressive impulses; need for recognition by authorities; chronic frustration with need for tenderness/love; oral frustration transformed into oral aggression repressed by the Superego."],
+            ["Cardiovascular System", "Syncope & Hypotension", "Vasovagal reflex accompanied by anxiety or fear resulting in a sharp drop in blood pressure, pallor, and fainting in patients with a hyperactive autonomic nervous system."],
+            ["Autoimmune Processes", "Rheumatoid Arthritis, Systemic Lupus, etc.", "Severe stress acts as a trigger for onset; chronic stress, anger, or depression worsen the clinical course."],
+            ["Skin", "Neurodermatitis (Eczema)", "Triggered by stressful situations (death or separation of a loved one), conflicts related to sexuality, and suppressed anger. Skin is a 'mirror of the individual's emotional state'."]
+          ]
+        },
+        {
+          title: "4. Chapter 12 & Appendix 9 (pp. 126–132, 181): Vulnerable Patient Groups",
+          headers: ["Vulnerable Group", "Core Clinical & Psychosocial Problematics", "Specialist's Psychological Approach"],
+          rows: [
+            ["Children & Adolescents", "Frequent infections, chronic diseases, vulnerability to stress, normative age crises. Often a 'symptom' of the family dynamic; healthy siblings may lack needed parental love when one child is sick.", "Emotional support; attitude of honesty, equality, and acceptance. Use play and art, active listening, focus on trauma, and work with the whole family."],
+            ["People with Intellectual Disability", "Intellectual deficit, suggestibility, manipulability.", "Comprehensible accessible language for communication, training in social skills and independent living, and abuse protection."],
+            ["Adults with Disabilities", "Risk of social isolation and secondary somatic/mental decompensation.", "Compulsory introduction to the social patronage system, mutual aid groups, sports, social events, distance learning, and multidisciplinary physical health maintenance."],
+            ["Migrants & Refugees", "Severe migration/war trauma, linguistic barriers, cultural/religious refusal of medical procedures.", "Culturally sensitive approach (distinguishing cultural norms like belief in spirits from psychopathology); switch to medical custody if treatment refusal endangers life."],
+            ["Elderly Patients", "Ageism discrimination, loneliness, and Polymorbidity (multiple diagnoses and polypharmacy interactions).", "Empathy and acceptance of aging as natural; leverage retained crystallized intelligence; ensure they feel needed by family and 'have their word heard'."]
+          ]
+        }
+      ]
+    };
+
+    // ============================================================================
+    // STATE INITIALIZATION & RADIAL AUTO-LAYOUT
+    // ============================================================================
+    let activeConfig = JSON.parse(localStorage.getItem('medpsych_v4_subject_config')) || DEFAULT_SUBJECT_CONFIG;
+    let storagePrefix = activeConfig.id || 'medical_psychology_mu_plovdiv_v4';
+
+    let lecturesData = JSON.parse(localStorage.getItem(`${storagePrefix}_lectures`)) || JSON.parse(JSON.stringify(activeConfig.chapters));
+    let practicalsData = JSON.parse(localStorage.getItem(`${storagePrefix}_practicals`)) || JSON.parse(JSON.stringify(activeConfig.practicals));
+    let referenceData = activeConfig.referenceTables || [];
+
+    const hubX = 1600;
+    const hubY = 920;
+    const wireStateMap = {};
+
+    function assignRadialCoordinatesIfMissing(forceReset = false) {
+      const total = lecturesData.length;
+      lecturesData.forEach((lec, idx) => {
+        if (forceReset || typeof lec.x !== 'number' || typeof lec.y !== 'number') {
+          const angle = (idx / Math.max(1, total)) * Math.PI * 2 - Math.PI / 2;
+          const radiusX = total > 10 ? 960 : 680;
+          const radiusY = total > 10 ? 680 : 480;
+          lec.x = Math.round(hubX + Math.cos(angle) * radiusX);
+          lec.y = Math.round(hubY + Math.sin(angle) * radiusY);
+          lec.restX = lec.x;
+          lec.restY = lec.y;
+        }
+        if (typeof lec.restX !== 'number') lec.restX = lec.x;
+        if (typeof lec.restY !== 'number') lec.restY = lec.y;
+        lec.vx = lec.vx || 0;
+        lec.vy = lec.vy || 0;
+
+        const dir = lec.x < hubX ? -1 : 1;
+        lec.branches.forEach((br, bIdx) => {
+          const defaultOffX = dir * 280;
+          const defaultOffY = (bIdx - (lec.branches.length - 1) / 2) * 84;
+          if (forceReset || typeof br.offX !== 'number') {
+            br.offX = defaultOffX;
+            br.offY = defaultOffY;
+          }
+          if (forceReset || typeof br.bx !== 'number') {
+            br.bx = lec.x + br.offX;
+            br.by = lec.y + br.offY;
+          }
+          br.vx = br.vx || 0;
+          br.vy = br.vy || 0;
+        });
+      });
+    }
+
+    function autoArrangeRadial() {
+      assignRadialCoordinatesIfMissing(true);
+      triggerPlayfulImpulse(true);
+      saveAllData();
+      renderConceptMap();
+    }
+
+    function saveAllData() {
+      localStorage.setItem(`${storagePrefix}_lectures`, JSON.stringify(lecturesData));
+      localStorage.setItem(`${storagePrefix}_practicals`, JSON.stringify(practicalsData));
+      generateAnkiExport();
+    }
+
+    let selectedLectureId = lecturesData[0]?.id || 1;
+    let activeCluster = 'all';
+    let expandedBranches = new Set([1, 4, 6, 7, 10, 15, 16, 17]);
+    let expandedLeafBranches = new Set(["1-0", "6-1", "10-1", "16-0"]);
+    let masteredLectures = new Set(JSON.parse(localStorage.getItem(`${storagePrefix}_mastered`) || '[]'));
+    let lectureNotes = JSON.parse(localStorage.getItem(`${storagePrefix}_notes`) || '{}');
+
+    let leftSidebarOpen = true;
+    let rightSidebarOpen = true;
+    let physicsEnabled = true;
+    let iphoneMode = false;
+    let iphoneFramed = true;
+
+    let scale = 0.65;
+    let panX = -320;
+    let panY = -160;
+    let isPanning = false;
+    let panStartX = 0, panStartY = 0;
+    let lastPanClientX = 0, lastPanClientY = 0;
+    let dragTarget = null;
+
+    let domLectureNodes = {};
+    let domBranchNodes = {};
+    let domHubWirePaths = {};
+    let domBranchWirePaths = {};
+
+    function initApp() {
+      document.getElementById('brand-title').textContent = activeConfig.appTitle || 'Medical Psychology Atlas';
+      document.getElementById('brand-icon').textContent = activeConfig.icon || 'Ψ';
+      document.title = activeConfig.appTitle || 'Medical Psychology — Interactive Atlas';
+
+      assignRadialCoordinatesIfMissing(false);
+      renderClusterFilters();
+      renderLectureList();
+      renderConceptMap();
+      renderInspector(selectedLectureId);
+      renderPracticals();
+      renderReferenceTab();
+      generateAnkiExport();
+      updateProgressBadge();
+      setupCanvasInteractions();
+      setupSpacebarWaveShortcut();
+      initBasketMinigame();
+      resetMapView();
+      requestAnimationFrame(physicsTick);
+    }
+
+    // ============================================================================
+    // SPACEBAR ELASTIC WAVE SHORTCUT + VISUAL SHOCKWAVE RING
+    // ============================================================================
+    function setupSpacebarWaveShortcut() {
+      window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space') {
+          const activeEl = document.activeElement;
+          const tag = activeEl ? activeEl.tagName : '';
+          if (tag === 'INPUT' || tag === 'TEXTAREA' || (activeEl && activeEl.isContentEditable)) {
+            return;
+          }
+          e.preventDefault();
+          triggerPlayfulImpulse(true);
+        }
+      });
+    }
+
+    function spawnShockwaveRing(worldX, worldY) {
+      const world = document.getElementById('map-world');
+      if (!world) return;
+      const ring = document.createElement('div');
+      ring.className = 'shockwave-ring';
+      ring.style.left = `${worldX}px`;
+      ring.style.top = `${worldY}px`;
+      world.appendChild(ring);
+      setTimeout(() => ring.remove(), 780);
+    }
+
+    // ============================================================================
+    // ZOOM IN / OUT RADIAL PHYSICS & FAST PAN INERTIA IMPULSE
+    // ============================================================================
+    function applyZoomPhysicsImpulse(zoomDirection, centerWorldX, centerWorldY) {
+      if (!physicsEnabled) return;
+      // zoomDirection > 0 means Zoom In (push nodes outward as we dive in)
+      // zoomDirection < 0 means Zoom Out (pull nodes inward toward center as we pull back)
+      lecturesData.forEach(lec => {
+        const dx = lec.x - centerWorldX;
+        const dy = lec.y - centerWorldY;
+        const dist = Math.max(80, Math.hypot(dx, dy));
+        const nx = dx / dist;
+        const ny = dy / dist;
+
+        const force = zoomDirection * Math.min(24, Math.max(8, dist * 0.022));
+        lec.vx += nx * force;
+        lec.vy += ny * force;
+
+        lec.branches.forEach(br => {
+          const bdx = br.bx - centerWorldX;
+          const bdy = br.by - centerWorldY;
+          const bdist = Math.max(80, Math.hypot(bdx, bdy));
+          br.vx += (bdx / bdist) * force * 1.35;
+          br.vy += (bdy / bdist) * force * 1.35;
+        });
+      });
+    }
+
+    function applyPanInertiaImpulse(screenDeltaX, screenDeltaY) {
+      if (!physicsEnabled) return;
+      // When dragging the canvas fast, nodes & wires experience G-force lag opposite to pan acceleration
+      const worldImpulseX = Math.max(-18, Math.min(18, (-screenDeltaX / scale) * 0.22));
+      const worldImpulseY = Math.max(-18, Math.min(18, (-screenDeltaY / scale) * 0.22));
+
+      lecturesData.forEach(lec => {
+        lec.vx += worldImpulseX * 0.65;
+        lec.vy += worldImpulseY * 0.65;
+        lec.branches.forEach(br => {
+          br.vx += worldImpulseX * 1.15;
+          br.vy += worldImpulseY * 1.15;
+        });
+      });
+    }
+
+    // ============================================================================
+    // 60FPS SPRING, INERTIA & ELASTIC WIRE PHYSICS ENGINE
+    // ============================================================================
+    function physicsTick() {
+      if (physicsEnabled) {
+        lecturesData.forEach(lec => {
+          if (activeCluster !== 'all' && lec.cluster !== activeCluster) return;
+
+          const isDraggingThisLec = dragTarget && dragTarget.type === 'lecture' && dragTarget.lecId === lec.id;
+
+          if (!isDraggingThisLec) {
+            const dx = lec.restX - lec.x;
+            const dy = lec.restY - lec.y;
+            const ax = dx * 0.085;
+            const ay = dy * 0.085;
+
+            lec.vx = (lec.vx + ax) * 0.82;
+            lec.vy = (lec.vy + ay) * 0.82;
+
+            if (Math.abs(lec.vx) > 0.01 || Math.abs(lec.vy) > 0.01 || Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
+              lec.x += lec.vx;
+              lec.y += lec.vy;
+            } else {
+              lec.x = lec.restX;
+              lec.y = lec.restY;
+              lec.vx = 0;
+              lec.vy = 0;
+            }
+          }
+
+          const lecEl = domLectureNodes[lec.id];
+          if (lecEl) {
+            lecEl.style.left = `${lec.x - 125}px`;
+            lecEl.style.top = `${lec.y - 45}px`;
+          }
+
+          const hubPath = domHubWirePaths[lec.id];
+          if (hubPath) {
+            updateElasticWirePath(`hub-${lec.id}`, hubPath, hubX, hubY, lec.x, lec.y, lec.vx, lec.vy, true);
+          }
+
+          if (expandedBranches.has(lec.id)) {
+            lec.branches.forEach((br, bIdx) => {
+              const bKey = `${lec.id}-${bIdx}`;
+              const isDraggingThisBranch = dragTarget && dragTarget.type === 'branch' && dragTarget.lecId === lec.id && dragTarget.bIdx === bIdx;
+
+              const targetBX = lec.x + br.offX;
+              const targetBY = lec.y + br.offY;
+
+              if (!isDraggingThisBranch) {
+                const bdx = targetBX - br.bx;
+                const bdy = targetBY - br.by;
+                const bax = bdx * 0.095;
+                const bay = bdy * 0.095;
+
+                br.vx = (br.vx + bax) * 0.83;
+                br.vy = (br.vy + bay) * 0.83;
+
+                if (Math.abs(br.vx) > 0.01 || Math.abs(br.vy) > 0.01 || Math.abs(bdx) > 0.1 || Math.abs(bdy) > 0.1) {
+                  br.bx += br.vx;
+                  br.by += br.vy;
+                } else {
+                  br.bx = targetBX;
+                  br.by = targetBY;
+                  br.vx = 0;
+                  br.vy = 0;
+                }
+              }
+
+              const bEl = domBranchNodes[bKey];
+              if (bEl) {
+                bEl.style.left = `${br.bx - 115}px`;
+                bEl.style.top = `${br.by - 20}px`;
+              }
+
+              const bPath = domBranchWirePaths[bKey];
+              if (bPath) {
+                const relVx = (br.vx || 0) + (lec.vx || 0) * 0.6;
+                const relVy = (br.vy || 0) + (lec.vy || 0) * 0.6;
+                updateElasticWirePath(`br-${bKey}`, bPath, lec.x, lec.y, br.bx, br.by, relVx, relVy, false);
+              }
+            });
+          }
+        });
+      }
+      requestAnimationFrame(physicsTick);
+    }
+
+    function updateElasticWirePath(wireKey, pathEl, x1, y1, x2, y2, endVx, endVy, isHubWire) {
+      let w = wireStateMap[wireKey];
+      const idealX = (x1 + x2) * 0.5;
+      const idealY = (y1 + y2) * 0.5 - (isHubWire ? 18 : 8);
+
+      if (!w) {
+        w = { cx: idealX, cy: idealY, vx: 0, vy: 0 };
+        wireStateMap[wireKey] = w;
+      }
+
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const len = Math.max(1, Math.hypot(dx, dy));
+      const nx = -dy / len;
+      const ny = dx / len;
+
+      const speedCross = (endVx * nx + endVy * ny);
+      const whipForceX = -endVx * 0.45 + nx * speedCross * 0.55;
+      const whipForceY = -endVy * 0.45 + ny * speedCross * 0.55;
+
+      const springK = isHubWire ? 0.13 : 0.15;
+      const damping = isHubWire ? 0.77 : 0.75;
+
+      const ax = (idealX - w.cx) * springK + whipForceX;
+      const ay = (idealY - w.cy) * springK + whipForceY;
+
+      w.vx = (w.vx + ax) * damping;
+      w.vy = (w.vy + ay) * damping;
+      w.cx += w.vx;
+      w.cy += w.vy;
+
+      pathEl.setAttribute('d', `M ${x1.toFixed(1)} ${y1.toFixed(1)} Q ${w.cx.toFixed(1)} ${w.cy.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}`);
+    }
+
+    function togglePhysicsEngine() {
+      physicsEnabled = !physicsEnabled;
+      const btn = document.getElementById('btn-physics-toggle');
+      if (physicsEnabled) {
+        btn.textContent = '🧲 Fisica: ON';
+        btn.className = 'px-2.5 h-7 rounded-lg bg-emerald-600/25 border border-emerald-500/50 hover:bg-emerald-600/40 text-[11px] text-emerald-200 font-semibold transition';
+      } else {
+        btn.textContent = '🔒 Fisica: OFF';
+        btn.className = 'px-2.5 h-7 rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 text-[11px] text-slate-400 font-semibold transition';
+      }
+    }
+
+    function triggerPlayfulImpulse(withVisualRing = false) {
+      if (!physicsEnabled) togglePhysicsEngine();
+      if (withVisualRing) spawnShockwaveRing(hubX, hubY);
+      lecturesData.forEach(lec => {
+        const angle = Math.atan2(lec.y - hubY, lec.x - hubX);
+        lec.vx += Math.cos(angle) * 28 + (Math.random() - 0.5) * 14;
+        lec.vy += Math.sin(angle) * 28 + (Math.random() - 0.5) * 14;
+        lec.branches.forEach((br, idx) => {
+          br.vx += Math.cos(angle + idx * 0.5) * 36;
+          br.vy += Math.sin(angle + idx * 0.5) * 36;
+        });
+      });
+    }
+
+    // ============================================================================
+    // FRONT-FACING BASKETBALL SLINGSHOT MINIGAME (PURE 2.5D PHYSICS, ON/OFF)
+    // ============================================================================
+    let basketActive = false;
+    let basketScore = 0;
+    let basketStreak = 0;
+    let bBall = {
+      x: 153, y: 278, z: 0,
+      vx: 0, vy: 0, vz: 0,
+      radius: 21,
+      state: 'ready', // 'ready' | 'pulling' | 'flying' | 'post_shot'
+      pullX: 153, pullY: 278,
+      rot: 0, vRot: 0,
+      scoredThisShot: false,
+      enteredFromAbove: false
+    };
+    let netSway = 0;
+    let netSwayVel = 0;
+    let floatingPopups = [];
+
+    function toggleBasketMinigame() {
+      basketActive = !basketActive;
+      const widget = document.getElementById('basket-widget');
+      const btn = document.getElementById('btn-basket-toggle');
+      const label = document.getElementById('basket-toggle-label');
+      widget.classList.toggle('hidden', !basketActive);
+      if (basketActive) {
+        label.textContent = 'Basket: ON';
+        btn.className = 'px-2.5 py-1.5 rounded-lg bg-orange-600 text-white border border-orange-400 text-[11px] font-bold flex items-center gap-1 shadow-lg transition';
+        resetBasketBall();
+      } else {
+        label.textContent = 'Basket: OFF';
+        btn.className = 'px-2.5 py-1.5 rounded-lg bg-orange-950/80 hover:bg-orange-900 text-orange-300 border border-orange-700/50 text-[11px] font-semibold flex items-center gap-1 transition';
+      }
+    }
+
+    function resetBasketBall() {
+      bBall.x = 153;
+      bBall.y = 275;
+      bBall.z = 0;
+      bBall.vx = 0;
+      bBall.vy = 0;
+      bBall.vz = 0;
+      bBall.state = 'ready';
+      bBall.pullX = 153;
+      bBall.pullY = 275;
+      bBall.scoredThisShot = false;
+      bBall.enteredFromAbove = false;
+    }
+
+    function initBasketMinigame() {
+      const canvas = document.getElementById('basket-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+
+      const anchorX = 153;
+      const anchorY = 275;
+      const hoopX = 153;
+      const hoopY = 112;
+      const rimRadius = 27;
+
+      const getCanvasPos = (clientX, clientY) => {
+        const rect = canvas.getBoundingClientRect();
+        return {
+          x: (clientX - rect.left) * (canvas.width / rect.width),
+          y: (clientY - rect.top) * (canvas.height / rect.height)
+        };
+      };
+
+      const startPull = (clientX, clientY, e) => {
+        if (!basketActive) return;
+        const pos = getCanvasPos(clientX, clientY);
+        if (bBall.state === 'flying' || bBall.state === 'post_shot') {
+          resetBasketBall();
+        }
+        const dist = Math.hypot(pos.x - bBall.x, pos.y - bBall.y);
+        if (dist <= 45) {
+          e.stopPropagation();
+          e.preventDefault();
+          bBall.state = 'pulling';
+          bBall.pullX = pos.x;
+          bBall.pullY = pos.y;
+        }
+      };
+
+      const movePull = (clientX, clientY) => {
+        if (bBall.state !== 'pulling') return;
+        const pos = getCanvasPos(clientX, clientY);
+        // Clamp pull range so user pulls downward/backward like a slingshot
+        const dx = pos.x - anchorX;
+        const dy = Math.max(5, pos.y - (anchorY - 10));
+        const maxPull = 62;
+        const d = Math.hypot(dx, dy);
+        if (d > maxPull) {
+          bBall.pullX = anchorX + (dx / d) * maxPull;
+          bBall.pullY = (anchorY - 10) + (dy / d) * maxPull;
+        } else {
+          bBall.pullX = anchorX + dx;
+          bBall.pullY = (anchorY - 10) + dy;
+        }
+        bBall.x = bBall.pullX;
+        bBall.y = bBall.pullY;
+      };
+
+      const releasePull = () => {
+        if (bBall.state !== 'pulling') return;
+        const pullDx = anchorX - bBall.pullX;
+        const pullDy = anchorY - bBall.pullY;
+        const pullPower = Math.hypot(pullDx, pullDy);
+
+        if (pullPower < 8) {
+          resetBasketBall();
+          return;
+        }
+
+        // Launch forward toward the front-facing hoop with elastic power proportional to pull distance
+        bBall.state = 'flying';
+        bBall.vx = pullDx * 0.145;
+        bBall.vy = -8.2 - (pullPower * 0.135);
+        bBall.vz = 0.017 + (pullPower * 0.00022);
+        bBall.vRot = pullDx * 0.02;
+        bBall.scoredThisShot = false;
+        bBall.enteredFromAbove = false;
+      };
+
+      canvas.addEventListener('mousedown', (e) => startPull(e.clientX, e.clientY, e));
+      window.addEventListener('mousemove', (e) => movePull(e.clientX, e.clientY));
+      window.addEventListener('mouseup', releasePull);
+
+      canvas.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) startPull(e.touches[0].clientX, e.touches[0].clientY, e);
+      }, { passive: false });
+      window.addEventListener('touchmove', (e) => {
+        if (bBall.state === 'pulling' && e.touches.length === 1) {
+          e.preventDefault();
+          movePull(e.touches[0].clientX, e.touches[0].clientY);
+        }
+      }, { passive: false });
+      window.addEventListener('touchend', releasePull);
+
+      function stepBasketPhysics() {
+        if (basketActive) {
+          // Net spring physics
+          const netAx = -netSway * 0.18;
+          netSwayVel = (netSwayVel + netAx) * 0.85;
+          netSway += netSwayVel;
+
+          if (bBall.state === 'flying' || bBall.state === 'post_shot') {
+            bBall.x += bBall.vx;
+            bBall.y += bBall.vy;
+            bBall.z += bBall.vz;
+            bBall.vy += 0.34; // Gravity
+            bBall.rot += bBall.vRot;
+
+            // Track if ball rose above the hoop level on its arc
+            if (bBall.y < hoopY - 12) {
+              bBall.enteredFromAbove = true;
+            }
+
+            // Backboard collision at depth z >= 1.02
+            if (bBall.z >= 1.02 && bBall.z <= 1.18 && Math.abs(bBall.x - hoopX) < 52 && bBall.y > 38 && bBall.y < 118 && bBall.vz > 0) {
+              bBall.vz = -bBall.vz * 0.45;
+              bBall.vy *= 0.78;
+              bBall.vx *= 0.7;
+            }
+
+            // Rim plane interaction when descending near z = 0.85 .. 1.12 and y near hoopY
+            if (bBall.enteredFromAbove && bBall.vy > 0 && Math.abs(bBall.y - hoopY) < 12 && bBall.z >= 0.78 && bBall.z <= 1.18) {
+              const distToHoopCenter = Math.abs(bBall.x - hoopX);
+
+              if (distToHoopCenter < rimRadius - 8 && !bBall.scoredThisShot) {
+                // SWISH / GOAL!
+                bBall.scoredThisShot = true;
+                bBall.state = 'post_shot';
+                bBall.vx *= 0.35;
+                basketScore++;
+                basketStreak++;
+                document.getElementById('basket-score').textContent = basketScore;
+                document.getElementById('basket-streak').textContent = basketStreak > 1 ? `🔥 Streak x${basketStreak}` : '';
+                netSwayVel = (bBall.vx >= 0 ? 1 : -1) * 12 + 8;
+                floatingPopups.push({
+                  x: hoopX,
+                  y: hoopY - 10,
+                  text: distToHoopCenter < 8 ? 'SWISH! +1 🔥' : 'CANESTRO! +1 🏀',
+                  alpha: 1.0
+                });
+              } else if (distToHoopCenter >= rimRadius - 8 && distToHoopCenter <= rimRadius + 10) {
+                // Rim Iron Bounce!
+                const rimPostX = bBall.x < hoopX ? (hoopX - rimRadius) : (hoopX + rimRadius);
+                const bounceDx = bBall.x - rimPostX;
+                bBall.vy = -Math.abs(bBall.vy) * 0.58;
+                bBall.vx += bounceDx * 0.28;
+                bBall.vRot = bounceDx * 0.05;
+                netSwayVel += 3;
+              }
+            }
+
+            // Reset when ball falls below floor
+            if (bBall.y > 370 || bBall.x < -40 || bBall.x > 350) {
+              if (!bBall.scoredThisShot) {
+                basketStreak = 0;
+                document.getElementById('basket-streak').textContent = '';
+              }
+              resetBasketBall();
+            }
+          }
+
+          drawBasketScene(ctx, canvas.width, canvas.height, anchorX, anchorY, hoopX, hoopY, rimRadius);
+        }
+        requestAnimationFrame(stepBasketPhysics);
+      }
+
+      requestAnimationFrame(stepBasketPhysics);
+    }
+
+    function drawBasketScene(ctx, w, h, anchorX, anchorY, hoopX, hoopY, rimRadius) {
+      ctx.clearRect(0, 0, w, h);
+
+      // Court Perspective Lines
+      ctx.strokeStyle = 'rgba(51, 65, 85, 0.35)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(hoopX, anchorY + 20, 115, Math.PI * 1.12, Math.PI * 1.88);
+      ctx.stroke();
+
+      // 1. Backboard (Front-facing glass backboard)
+      ctx.fillStyle = 'rgba(30, 41, 59, 0.85)';
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.roundRect(hoopX - 54, 38, 108, 76, 8);
+      ctx.fill();
+      ctx.stroke();
+
+      // Backboard Shooter's Square
+      ctx.strokeStyle = '#f97316';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(hoopX - 20, 74, 40, 30);
+
+      // BackRim Bracket
+      ctx.fillStyle = '#ea580c';
+      ctx.fillRect(hoopX - 6, 106, 12, 6);
+
+      // Perspective scale of ball based on depth Z
+      const ballScale = 1 / (1 + Math.max(0, bBall.z) * 0.55);
+      const currentBallR = bBall.radius * ballScale;
+
+      // If ball is behind the front rim (z > 0.95), draw ball before front rim & net
+      const ballBehindFrontRim = bBall.z > 0.92;
+      if (ballBehindFrontRim) {
+        drawBasketballSprite(ctx, bBall.x, bBall.y, currentBallR, bBall.rot);
+      }
+
+      // 2. Dynamic Elastic Net
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.85)';
+      ctx.lineWidth = 1.4;
+      const netBottomW = rimRadius * 0.62;
+      const netHeight = 36;
+      for (let i = -3; i <= 3; i++) {
+        const topX = hoopX + (i / 3) * rimRadius;
+        const botX = hoopX + (i / 3) * netBottomW + netSway * (1 - Math.abs(i) * 0.15);
+        ctx.beginPath();
+        ctx.moveTo(topX, hoopY);
+        ctx.quadraticCurveTo((topX + botX) * 0.5 + netSway * 0.6, hoopY + netHeight * 0.55, botX, hoopY + netHeight);
+        ctx.stroke();
+      }
+      // Horizontal net rings
+      for (let r = 1; r <= 3; r++) {
+        const t = r / 3.5;
+        const yLevel = hoopY + netHeight * t;
+        const halfW = rimRadius * (1 - t * 0.38);
+        const swayOffset = netSway * t;
+        ctx.beginPath();
+        ctx.moveTo(hoopX - halfW + swayOffset, yLevel);
+        ctx.lineTo(hoopX + halfW + swayOffset, yLevel);
+        ctx.stroke();
+      }
+
+      // 3. Front Rim (Orange Iron Hoop)
+      ctx.strokeStyle = '#f97316';
+      ctx.lineWidth = 4.5;
+      ctx.beginPath();
+      ctx.ellipse(hoopX, hoopY, rimRadius, 6.5, 0, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // 4. Slingshot Elastic Bands & Trajectory Preview when pulling
+      if (bBall.state === 'pulling' || bBall.state === 'ready') {
+        // Slingshot Anchor Posts
+        ctx.fillStyle = '#475569';
+        ctx.beginPath();
+        ctx.arc(anchorX - 34, anchorY - 8, 4, 0, Math.PI * 2);
+        ctx.arc(anchorX + 34, anchorY - 8, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (bBall.state === 'pulling') {
+          const pullDist = Math.hypot(anchorX - bBall.pullX, anchorY - bBall.pullY);
+          const tensionColor = pullDist > 42 ? '#f43f5e' : (pullDist > 22 ? '#f59e0b' : '#22d3ee');
+
+          // Elastic Slingshot Cords
+          ctx.strokeStyle = tensionColor;
+          ctx.lineWidth = 2.5 + (pullDist / 28);
+          ctx.beginPath();
+          ctx.moveTo(anchorX - 34, anchorY - 8);
+          ctx.lineTo(bBall.x, bBall.y);
+          ctx.lineTo(anchorX + 34, anchorY - 8);
+          ctx.stroke();
+
+          // Trajectory Guide Dots
+          const simVx = (anchorX - bBall.pullX) * 0.145;
+          const simVy = -8.2 - (pullDist * 0.135);
+          ctx.fillStyle = tensionColor;
+          for (let step = 3; step <= 21; step += 3) {
+            const px = bBall.x + simVx * step;
+            const py = bBall.y + simVy * step + 0.5 * 0.34 * step * step;
+            ctx.beginPath();
+            ctx.arc(px, py, Math.max(1.5, 4 - step * 0.12), 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
+      // Draw ball in front if z <= 0.92
+      if (!ballBehindFrontRim) {
+        drawBasketballSprite(ctx, bBall.x, bBall.y, currentBallR, bBall.rot);
+      }
+
+      // Floating Score Popups
+      for (let i = floatingPopups.length - 1; i >= 0; i--) {
+        const p = floatingPopups[i];
+        ctx.save();
+        ctx.font = '800 13px Inter, sans-serif';
+        ctx.fillStyle = `rgba(251, 191, 36, ${p.alpha})`;
+        ctx.textAlign = 'center';
+        ctx.fillText(p.text, p.x, p.y);
+        ctx.restore();
+        p.y -= 1.1;
+        p.alpha -= 0.022;
+        if (p.alpha <= 0) floatingPopups.splice(i, 1);
+      }
+    }
+
+    function drawBasketballSprite(ctx, x, y, r, rot) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rot);
+
+      const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
+      grad.addColorStop(0, '#fb923c');
+      grad.addColorStop(0.7, '#ea580c');
+      grad.addColorStop(1, '#9a3412');
+
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Basketball seams
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(-r, 0);
+      ctx.lineTo(r, 0);
+      ctx.moveTo(0, -r);
+      ctx.lineTo(0, r);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(-r * 0.65, 0, r * 0.7, -Math.PI * 0.38, Math.PI * 0.38);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(r * 0.65, 0, r * 0.7, Math.PI * 0.62, Math.PI * 1.38);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    // ============================================================================
+    // UI & CLUSTER FILTERS
+    // ============================================================================
+    function renderClusterFilters() {
+      const container = document.getElementById('cluster-filters');
+      if (!activeConfig.clusters || !activeConfig.clusters.length) {
+        container.innerHTML = '';
+        return;
+      }
+      container.innerHTML = activeConfig.clusters.map(c => `
+        <button onclick="filterCluster('${c.id}')" class="flex items-center gap-1.5 text-left hover:underline truncate" style="color:${c.color}">
+          <span class="w-2 h-2 rounded-full shrink-0" style="background:${c.color}"></span>
+          <span class="truncate">${c.label}</span>
+        </button>
+      `).join('');
+    }
+
+    function renderReferenceTab() {
+      const container = document.getElementById('reference-container');
+      if (!referenceData || !referenceData.length) {
+        container.innerHTML = `<div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-xs text-slate-400">Nessuna tabella di riferimento configurata.</div>`;
+        return;
+      }
+      container.innerHTML = `
+        <div>
+          <h2 class="text-xl sm:text-2xl font-bold text-white">Tabelle & Appendici Ufficiali del Libro (Stoyanov & Arabadzhiev)</h2>
+          <p class="text-xs text-slate-400 mt-1">Riepilogo strutturato di Processi Mentali (App. 1), Colloquio Clinico (Ch. 6), Psicosomatica (Ch. 10) e Gruppi Vulnerabili (App. 9).</p>
+        </div>
+        ${referenceData.map(tb => `
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 overflow-x-auto shadow-xl">
+            <h3 class="text-base font-bold text-cyan-400 mb-3">${tb.title}</h3>
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="border-b border-slate-800 text-slate-400 uppercase">
+                  ${tb.headers.map(h => `<th class="py-2.5 px-3">${h}</th>`).join('')}
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/70 text-slate-200">
+                ${tb.rows.map(row => `
+                  <tr>
+                    ${row.map((cell, idx) => `<td class="py-2.5 px-3 ${idx === 0 ? 'font-semibold text-white' : ''}">${cell}</td>`).join('')}
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `).join('')}
+      `;
+    }
+
+    function openSubjectModal() {
+      document.getElementById('subject-json-input').value = JSON.stringify(activeConfig, null, 2);
+      document.getElementById('subject-modal').classList.remove('hidden');
+    }
+
+    function closeSubjectModal() {
+      document.getElementById('subject-modal').classList.add('hidden');
+    }
+
+    function applyImportedSubjectJSON() {
+      try {
+        const parsed = JSON.parse(document.getElementById('subject-json-input').value);
+        if (!parsed.chapters || !Array.isArray(parsed.chapters)) {
+          alert("Il JSON deve contenere un array 'chapters'.");
+          return;
+        }
+        localStorage.setItem('medpsych_v4_subject_config', JSON.stringify(parsed));
+        location.reload();
+      } catch (err) {
+        alert("Errore nel formato JSON: " + err.message);
+      }
+    }
+
+    // ============================================================================
+    // iPHONE 16 PRO MAX MODE TOGGLES
+    // ============================================================================
+    function toggleIPhoneMode() {
+      iphoneMode = !iphoneMode;
+      const body = document.body;
+      const btn = document.getElementById('btn-iphone-mode');
+      const label = document.getElementById('iphone-mode-label');
+      const frameBtn = document.getElementById('btn-iphone-frame');
+
+      if (iphoneMode) {
+        body.classList.add('iphone-mode');
+        if (window.innerWidth > 520 && iphoneFramed) {
+          body.classList.add('iphone-framed');
+        }
+        frameBtn.classList.remove('hidden');
+        label.textContent = 'iPhone 16 PM: ON';
+        btn.className = 'px-2.5 py-1.5 rounded-lg bg-cyan-600 text-white border border-cyan-400 text-[11px] font-bold flex items-center gap-1 shadow-lg transition';
+
+        if (leftSidebarOpen) toggleLeftSidebar();
+        if (rightSidebarOpen) toggleRightSidebar();
+        setTimeout(resetMapView, 60);
+      } else {
+        body.classList.remove('iphone-mode', 'iphone-framed');
+        frameBtn.classList.add('hidden');
+        label.textContent = 'iPhone 16 PM: OFF';
+        btn.className = 'px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] font-semibold flex items-center gap-1 transition';
+
+        if (!leftSidebarOpen) toggleLeftSidebar();
+        if (!rightSidebarOpen) toggleRightSidebar();
+        setTimeout(resetMapView, 60);
+      }
+    }
+
+    function toggleIPhoneFrameStyle() {
+      if (!iphoneMode) return;
+      iphoneFramed = !iphoneFramed;
+      document.body.classList.toggle('iphone-framed', iphoneFramed);
+      const frameBtn = document.getElementById('btn-iphone-frame');
+      frameBtn.textContent = iphoneFramed ? '🔲 Cornice' : '📱 Full';
+      setTimeout(resetMapView, 60);
+    }
+
+    function mobileNavAction(target) {
+      if (target === 'chapters') {
+        if (rightSidebarOpen) toggleRightSidebar();
+        toggleLeftSidebar();
+      } else if (target === 'inspector') {
+        if (leftSidebarOpen) toggleLeftSidebar();
+        toggleRightSidebar();
+      } else {
+        if (leftSidebarOpen) toggleLeftSidebar();
+        if (rightSidebarOpen) toggleRightSidebar();
+        switchMode(target);
+      }
+    }
+
+    // ============================================================================
+    // SIDEBAR COLLAPSE / ZEN MODE TRIGGERS
+    // ============================================================================
+    function toggleLeftSidebar() {
+      leftSidebarOpen = !leftSidebarOpen;
+      const el = document.getElementById('left-sidebar');
+      const floatBtn = document.getElementById('float-open-left');
+      if (leftSidebarOpen) {
+        el.style.width = iphoneMode ? '100%' : '290px';
+        el.style.opacity = '1';
+        el.style.pointerEvents = 'auto';
+        el.classList.remove('overflow-hidden', 'border-r-0');
+        floatBtn.classList.add('hidden');
+      } else {
+        el.style.width = '0px';
+        el.style.opacity = '0';
+        el.style.pointerEvents = 'none';
+        el.classList.add('overflow-hidden', 'border-r-0');
+        floatBtn.classList.remove('hidden');
+      }
+    }
+
+    function toggleRightSidebar() {
+      rightSidebarOpen = !rightSidebarOpen;
+      const el = document.getElementById('right-sidebar');
+      const floatBtn = document.getElementById('float-open-right');
+      if (rightSidebarOpen) {
+        el.style.width = iphoneMode ? '100%' : '385px';
+        el.style.opacity = '1';
+        el.style.pointerEvents = 'auto';
+        el.classList.remove('overflow-hidden', 'border-l-0');
+        floatBtn.classList.add('hidden');
+      } else {
+        el.style.width = '0px';
+        el.style.opacity = '0';
+        el.style.pointerEvents = 'none';
+        el.classList.add('overflow-hidden', 'border-l-0');
+        floatBtn.classList.remove('hidden');
+      }
+    }
+
+    function toggleZenMode() {
+      if (leftSidebarOpen || rightSidebarOpen) {
+        if (leftSidebarOpen) toggleLeftSidebar();
+        if (rightSidebarOpen) toggleRightSidebar();
+      } else {
+        toggleLeftSidebar();
+        toggleRightSidebar();
+      }
+    }
+
+    // ============================================================================
+    // RENDER LEFT SIDEBAR CHAPTER LIST
+    // ============================================================================
+    function renderLectureList(searchTerm = '') {
+      const container = document.getElementById('lecture-list');
+      container.innerHTML = '';
+      const q = searchTerm.toLowerCase().trim();
+
+      lecturesData.forEach(lec => {
+        if (activeCluster !== 'all' && lec.cluster !== activeCluster) return;
+        const matchesSearch = !q ||
+          lec.title.toLowerCase().includes(q) ||
+          lec.subtitle.toLowerCase().includes(q) ||
+          lec.summary.toLowerCase().includes(q) ||
+          lec.branches.some(b => b.name.toLowerCase().includes(q) || b.items.some(i => i.toLowerCase().includes(q)));
+        if (!matchesSearch) return;
+
+        const isSelected = lec.id === selectedLectureId;
+        const isMastered = masteredLectures.has(lec.id);
+
+        const btn = document.createElement('div');
+        btn.onclick = () => {
+          selectLecture(lec.id, true);
+          if (iphoneMode && leftSidebarOpen) toggleLeftSidebar();
+        };
+        btn.className = `w-full text-left p-2.5 rounded-xl border transition flex items-start gap-2 cursor-pointer ${
+          isSelected
+            ? 'bg-cyan-600/20 border-cyan-500/60 text-white shadow-md'
+            : 'bg-slate-950/60 border-slate-800/70 text-slate-300 hover:bg-slate-800/60'
+        }`;
+
+        btn.innerHTML = `
+          <span class="w-2.5 h-2.5 rounded-full mt-1.5 shrink-0" style="background:${lec.color}"></span>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between gap-1">
+              <span class="text-xs font-semibold truncate">${lec.title}</span>
+              ${isMastered ? '<span class="text-[10px] text-emerald-400">✔</span>' : ''}
+            </div>
+            <p class="text-[11px] text-slate-400 truncate mt-0.5">${lec.subtitle}</p>
+          </div>
+        `;
+        container.appendChild(btn);
+      });
+    }
+
+    function filterCluster(cluster) {
+      activeCluster = cluster;
+      renderLectureList(document.getElementById('global-search').value);
+      renderConceptMap();
+    }
+
+    function handleSearch(val) {
+      renderLectureList(val);
+      renderPracticals(val);
+    }
+
+    // ============================================================================
+    // BUILD CONCEPT MAP DOM & SVG PATHS
+    // ============================================================================
+    function renderConceptMap() {
+      assignRadialCoordinatesIfMissing(false);
+      const nodesLayer = document.getElementById('map-nodes');
+      const edgesSvg = document.getElementById('map-edges');
+      nodesLayer.innerHTML = '';
+      edgesSvg.innerHTML = '';
+
+      domLectureNodes = {};
+      domBranchNodes = {};
+      domHubWirePaths = {};
+      domBranchWirePaths = {};
+
+      // Central Hub Node
+      const hubEl = document.createElement('div');
+      hubEl.style.left = `${hubX - 155}px`;
+      hubEl.style.top = `${hubY - 58}px`;
+      hubEl.onclick = () => triggerPlayfulImpulse(true);
+      hubEl.className = 'absolute w-[310px] p-4 rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 text-white shadow-2xl border-2 border-white/20 text-center z-10 cursor-pointer hover:scale-105 transition';
+      hubEl.innerHTML = `
+        <div class="text-[10px] font-bold uppercase tracking-widest text-indigo-100">${activeConfig.hubBadge || 'MU Plovdiv Study Suite'}</div>
+        <div class="text-base font-extrabold mt-0.5">${activeConfig.hubTitle || 'MEDICAL PSYCHOLOGY'}</div>
+        <div class="text-[11px] text-indigo-100 mt-1">Premi SPAZIO o Clicca qui per Onda Elastica!</div>
+      `;
+      nodesLayer.appendChild(hubEl);
+
+      lecturesData.forEach(lec => {
+        if (activeCluster !== 'all' && lec.cluster !== activeCluster) return;
+
+        const isSelected = lec.id === selectedLectureId;
+        const isBranchOpen = expandedBranches.has(lec.id);
+        const isMastered = masteredLectures.has(lec.id);
+
+        const hubPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        hubPath.setAttribute('stroke', isSelected ? '#22d3ee' : lec.color);
+        hubPath.setAttribute('stroke-width', isSelected ? '3.5' : '2.2');
+        hubPath.setAttribute('stroke-opacity', isSelected ? '0.95' : '0.5');
+        hubPath.setAttribute('fill', 'none');
+        edgesSvg.appendChild(hubPath);
+        domHubWirePaths[lec.id] = hubPath;
+
+        const nodeEl = document.createElement('div');
+        nodeEl.style.left = `${lec.x - 125}px`;
+        nodeEl.style.top = `${lec.y - 45}px`;
+        nodeEl.className = `draggable-node absolute w-[250px] p-3 rounded-xl border backdrop-blur-md shadow-xl ${
+          isSelected
+            ? 'bg-slate-900 border-cyan-400 ring-2 ring-cyan-500/40 z-20'
+            : 'bg-slate-900/95 border-slate-700/80 hover:border-slate-500 z-10'
+        }`;
+
+        const startDragLecture = (clientX, clientY, e) => {
+          if (e.target.closest('button') || e.target.isContentEditable) return;
+          e.stopPropagation();
+          const rect = document.getElementById('canvas-container').getBoundingClientRect();
+          const worldX = (clientX - rect.left - panX) / scale;
+          const worldY = (clientY - rect.top - panY) / scale;
+          dragTarget = {
+            type: 'lecture',
+            lecId: lec.id,
+            startClientX: clientX,
+            startClientY: clientY,
+            lastWorldX: worldX,
+            lastWorldY: worldY,
+            grabOffsetX: lec.x - worldX,
+            grabOffsetY: lec.y - worldY,
+            hasMoved: false
+          };
+        };
+
+        nodeEl.addEventListener('mousedown', (e) => startDragLecture(e.clientX, e.clientY, e));
+        nodeEl.addEventListener('touchstart', (e) => {
+          if (e.touches.length === 1) startDragLecture(e.touches[0].clientX, e.touches[0].clientY, e);
+        }, { passive: false });
+
+        nodeEl.innerHTML = `
+          <div class="flex items-center justify-between gap-1">
+            <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full" style="background:${lec.color}25; color:${lec.color}; border:1px solid ${lec.color}50">
+              Ch. ${lec.id}
+            </span>
+            <div class="flex items-center gap-1">
+              ${isMastered ? '<span class="text-xs text-emerald-400" title="Mastered">✔</span>' : ''}
+              <button onclick="addBranchToLecture(event, ${lec.id})" class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-600/30 hover:bg-emerald-600/60 text-emerald-200 border border-emerald-500/40" title="Aggiungi una nuova Branch">
+                +Branch
+              </button>
+              <button onclick="toggleLectureBranch(event, ${lec.id})" class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-800 hover:bg-cyan-700 text-slate-200 border border-slate-700">
+                ${isBranchOpen ? '▼ ' + lec.branches.length : '▶ ' + lec.branches.length}
+              </button>
+            </div>
+          </div>
+          <div ondblclick="makeEditable(event, 'lec-title', ${lec.id})" title="Doppio click per modificare titolo"
+            class="editable-hint text-xs font-bold text-white mt-1.5 leading-snug">${lec.title}</div>
+          <div ondblclick="makeEditable(event, 'lec-subtitle', ${lec.id})" title="Doppio click per modificare sottotitolo"
+            class="editable-hint text-[10px] text-slate-400 mt-0.5 truncate">${lec.subtitle}</div>
+        `;
+        nodesLayer.appendChild(nodeEl);
+        domLectureNodes[lec.id] = nodeEl;
+
+        if (isBranchOpen) {
+          lec.branches.forEach((branch, bIdx) => {
+            const branchKey = `${lec.id}-${bIdx}`;
+            const isLeafOpen = expandedLeafBranches.has(branchKey);
+
+            const bLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            bLine.setAttribute('stroke', lec.color);
+            bLine.setAttribute('stroke-width', '1.9');
+            bLine.setAttribute('stroke-dasharray', '5 3');
+            bLine.setAttribute('stroke-opacity', '0.85');
+            bLine.setAttribute('fill', 'none');
+            edgesSvg.appendChild(bLine);
+            domBranchWirePaths[branchKey] = bLine;
+
+            const bEl = document.createElement('div');
+            bEl.style.left = `${branch.bx - 115}px`;
+            bEl.style.top = `${branch.by - 20}px`;
+            bEl.className = `draggable-node absolute w-[235px] px-3 py-2 rounded-xl bg-slate-950/95 border shadow-lg z-20 ${
+              isLeafOpen ? 'border-cyan-400/80 ring-1 ring-cyan-500/30' : 'border-slate-700 hover:border-slate-500'
+            }`;
+
+            const startDragBranch = (clientX, clientY, e) => {
+              if (e.target.closest('button') || e.target.isContentEditable) return;
+              e.stopPropagation();
+              const rect = document.getElementById('canvas-container').getBoundingClientRect();
+              const worldX = (clientX - rect.left - panX) / scale;
+              const worldY = (clientY - rect.top - panY) / scale;
+              dragTarget = {
+                type: 'branch',
+                lecId: lec.id,
+                bIdx: bIdx,
+                startClientX: clientX,
+                startClientY: clientY,
+                lastWorldX: worldX,
+                lastWorldY: worldY,
+                grabOffsetX: branch.bx - worldX,
+                grabOffsetY: branch.by - worldY,
+                hasMoved: false
+              };
+            };
+
+            bEl.addEventListener('mousedown', (e) => startDragBranch(e.clientX, e.clientY, e));
+            bEl.addEventListener('touchstart', (e) => {
+              if (e.touches.length === 1) startDragBranch(e.touches[0].clientX, e.touches[0].clientY, e);
+            }, { passive: false });
+
+            bEl.innerHTML = `
+              <div class="flex items-center justify-between gap-1">
+                <span ondblclick="makeEditable(event, 'branch-name', ${lec.id}, ${bIdx})" title="Doppio click per rinominare branch"
+                  class="editable-hint text-[11px] font-bold text-slate-100 truncate flex-1">${branch.name}</span>
+                <div class="flex items-center gap-1 shrink-0">
+                  <button onclick="addPointToBranch(event, ${lec.id}, ${bIdx})" class="text-[10px] px-1 rounded bg-emerald-900/60 hover:bg-emerald-700 text-emerald-300" title="Aggiungi punto">+</button>
+                  <button onclick="toggleLeafBranch(event, '${branchKey}', ${lec.id})" class="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 font-mono">
+                    ${isLeafOpen ? '−' : '+' + branch.items.length}
+                  </button>
+                </div>
+              </div>
+              ${isLeafOpen ? `
+                <ul class="mt-2 pt-2 border-t border-slate-800 space-y-1.5 text-[10px] text-slate-300 leading-snug">
+                  ${branch.items.map((it, iIdx) => `
+                    <li class="flex items-start justify-between gap-1 group">
+                      <div class="flex items-start gap-1.5 flex-1">
+                        <span style="color:${lec.color}">•</span>
+                        <span ondblclick="makeEditable(event, 'branch-item', ${lec.id}, ${bIdx}, ${iIdx})" title="Doppio click per modificare testo" class="editable-hint flex-1">${it}</span>
+                      </div>
+                      <button onclick="deletePointFromBranch(event, ${lec.id}, ${bIdx}, ${iIdx})" class="opacity-0 group-hover:opacity-100 text-rose-400 hover:text-rose-300 px-1" title="Elimina punto">×</button>
+                    </li>
+                  `).join('')}
+                </ul>
+              ` : ''}
+            `;
+            nodesLayer.appendChild(bEl);
+            domBranchNodes[branchKey] = bEl;
+          });
+        }
+      });
+    }
+
+    // ============================================================================
+    // DOUBLE-CLICK INLINE TEXT EDITOR
+    // ============================================================================
+    function makeEditable(e, editType, id1, id2, id3) {
+      e.stopPropagation();
+      const el = e.currentTarget;
+      el.contentEditable = "true";
+      el.focus();
+
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+
+      const finishEdit = () => {
+        el.contentEditable = "false";
+        const newVal = el.innerText.trim();
+        if (!newVal) return;
+
+        if (editType === 'lec-title') {
+          const lec = lecturesData.find(l => l.id === id1);
+          if (lec) lec.title = newVal;
+        } else if (editType === 'lec-subtitle') {
+          const lec = lecturesData.find(l => l.id === id1);
+          if (lec) lec.subtitle = newVal;
+        } else if (editType === 'lec-summary') {
+          const lec = lecturesData.find(l => l.id === id1);
+          if (lec) lec.summary = newVal;
+        } else if (editType === 'branch-name') {
+          const lec = lecturesData.find(l => l.id === id1);
+          if (lec && lec.branches[id2]) lec.branches[id2].name = newVal;
+        } else if (editType === 'branch-item') {
+          const lec = lecturesData.find(l => l.id === id1);
+          if (lec && lec.branches[id2]) lec.branches[id2].items[id3] = newVal;
+        } else if (editType === 'prac-title') {
+          const p = practicalsData[id1];
+          if (p) p.title = newVal;
+        } else if (editType === 'prep-name') {
+          const p = practicalsData[id1];
+          if (p && p.preparations[id2]) p.preparations[id2].name = newVal;
+        } else if (editType === 'prep-tooth') {
+          const p = practicalsData[id1];
+          if (p && p.preparations[id2]) p.preparations[id2].tooth = newVal;
+        } else if (editType === 'prep-burs') {
+          const p = practicalsData[id1];
+          if (p && p.preparations[id2]) p.preparations[id2].burSet = newVal;
+        } else if (editType === 'step-stage') {
+          const p = practicalsData[id1];
+          if (p && p.preparations[id2] && p.preparations[id2].steps[id3]) {
+            p.preparations[id2].steps[id3].stage = newVal;
+          }
+        } else if (editType === 'step-detail') {
+          const p = practicalsData[id1];
+          if (p && p.preparations[id2] && p.preparations[id2].steps[id3]) {
+            p.preparations[id2].steps[id3].detail = newVal;
+          }
+        }
+
+        saveAllData();
+        renderLectureList(document.getElementById('global-search').value);
+        renderConceptMap();
+        renderInspector(selectedLectureId);
+      };
+
+      el.addEventListener('blur', finishEdit, { once: true });
+      el.addEventListener('keydown', (ke) => {
+        if (ke.key === 'Enter' && !ke.shiftKey) {
+          ke.preventDefault();
+          el.blur();
+        }
+      });
+    }
+
+    // ============================================================================
+    // INTERNAL CRUD EDITOR
+    // ============================================================================
+    function addNewLecture() {
+      const newId = lecturesData.length ? Math.max(...lecturesData.map(l => l.id)) + 1 : 1;
+      const newX = hubX + (Math.random() > 0.5 ? 450 : -450);
+      const newY = hubY + (Math.random() * 400 - 200);
+      const defaultCluster = activeConfig.clusters?.[0]?.id || "foundations";
+      const newLec = {
+        id: newId,
+        title: `Ch. ${newId}: Nuovo Argomento`,
+        subtitle: "Doppio click per modificare",
+        cluster: defaultCluster,
+        color: "#06b6d4",
+        x: newX, y: newY,
+        restX: newX, restY: newY,
+        vx: 15, vy: -10,
+        summary: "Doppio click qui nell'Inspector per modificare il riassunto di questo capitolo.",
+        branches: [
+          {
+            name: "Nuova Branch 1",
+            offX: 270, offY: 0,
+            bx: newX + 270, by: newY,
+            vx: 20, vy: 0,
+            items: ["Doppio click per modificare questo punto."]
+          }
+        ]
+      };
+      lecturesData.push(newLec);
+      expandedBranches.add(newId);
+      expandedLeafBranches.add(`${newId}-0`);
+      saveAllData();
+      updateProgressBadge();
+      selectLecture(newId, true);
+    }
+
+    function deleteLecture(lecId) {
+      if (lecturesData.length <= 1) return;
+      if (!confirm("Vuoi eliminare questo capitolo?")) return;
+      lecturesData = lecturesData.filter(l => l.id !== lecId);
+      selectedLectureId = lecturesData[0].id;
+      saveAllData();
+      updateProgressBadge();
+      renderLectureList();
+      renderConceptMap();
+      renderInspector(selectedLectureId);
+    }
+
+    function addBranchToLecture(e, lecId) {
+      if (e) e.stopPropagation();
+      const lec = lecturesData.find(l => l.id === lecId);
+      if (!lec) return;
+      const dir = lec.x < hubX ? -1 : 1;
+      const bIdx = lec.branches.length;
+      const offX = dir * 280;
+      const offY = (bIdx - 1) * 75;
+      lec.branches.push({
+        name: `Nuova Branch ${bIdx + 1}`,
+        offX: offX,
+        offY: offY,
+        bx: lec.x + offX * 0.4,
+        by: lec.y + offY * 0.4,
+        vx: dir * 18,
+        vy: 8,
+        items: ["Nuovo concetto chiave (doppio click per modificare)"]
+      });
+      expandedBranches.add(lecId);
+      expandedLeafBranches.add(`${lecId}-${bIdx}`);
+      saveAllData();
+      renderConceptMap();
+      renderInspector(lecId);
+    }
+
+    function deleteBranch(lecId, bIdx) {
+      const lec = lecturesData.find(l => l.id === lecId);
+      if (!lec) return;
+      lec.branches.splice(bIdx, 1);
+      saveAllData();
+      renderConceptMap();
+      renderInspector(lecId);
+    }
+
+    function addPointToBranch(e, lecId, bIdx) {
+      if (e) e.stopPropagation();
+      const lec = lecturesData.find(l => l.id === lecId);
+      if (!lec || !lec.branches[bIdx]) return;
+      lec.branches[bIdx].items.push("Nuovo dettaglio: doppio click per modificare il testo.");
+      expandedLeafBranches.add(`${lecId}-${bIdx}`);
+      saveAllData();
+      renderConceptMap();
+      renderInspector(lecId);
+    }
+
+    function deletePointFromBranch(e, lecId, bIdx, iIdx) {
+      if (e) e.stopPropagation();
+      const lec = lecturesData.find(l => l.id === lecId);
+      if (!lec || !lec.branches[bIdx]) return;
+      lec.branches[bIdx].items.splice(iIdx, 1);
+      saveAllData();
+      renderConceptMap();
+      renderInspector(lecId);
+    }
+
+    function addNewPractical() {
+      const num = practicalsData.length + 1;
+      practicalsData.push({
+        id: `P${num}`,
+        number: `Protocollo #${num}`,
+        title: "Nuovo Protocollo Clinico (Doppio click per rinominare)",
+        focus: "Obiettivo clinico e psicologico del protocollo.",
+        preparations: [
+          {
+            code: `Proc ${num}A`,
+            tooth: "Riferimento Cap.",
+            name: "Prima Procedura del Protocollo",
+            burSet: "Strumenti / Scale utilizzate",
+            steps: [{ stage: "1. Primo Step", detail: "Doppio click per descrivere lo step." }]
+          },
+          {
+            code: `Proc ${num}B`,
+            tooth: "Riferimento Cap.",
+            name: "Seconda Procedura del Protocollo",
+            burSet: "Strumenti / Scale utilizzate",
+            steps: [{ stage: "1. Primo Step", detail: "Doppio click per descrivere lo step." }]
+          }
+        ]
+      });
+      saveAllData();
+      renderPracticals();
+    }
+
+    function addStepToPrep(pIdx, prepIdx) {
+      const prep = practicalsData[pIdx]?.preparations[prepIdx];
+      if (!prep) return;
+      const nextNum = prep.steps.length + 1;
+      prep.steps.push({
+        stage: `${nextNum}. Nuovo Step Operativo`,
+        detail: "Doppio click qui per inserire i dettagli clinici."
+      });
+      saveAllData();
+      renderPracticals();
+    }
+
+    function deleteStepFromPrep(pIdx, prepIdx, sIdx) {
+      const prep = practicalsData[pIdx]?.preparations[prepIdx];
+      if (!prep) return;
+      prep.steps.splice(sIdx, 1);
+      saveAllData();
+      renderPracticals();
+    }
+
+    function toggleLectureBranch(e, lecId) {
+      e.stopPropagation();
+      const lec = lecturesData.find(l => l.id === lecId);
+      if (expandedBranches.has(lecId)) {
+        expandedBranches.delete(lecId);
+      } else {
+        expandedBranches.add(lecId);
+        if (lec) {
+          lec.branches.forEach(br => {
+            br.bx = lec.x + br.offX * 0.35;
+            br.by = lec.y + br.offY * 0.35;
+            br.vx = br.offX * 0.08;
+            br.vy = br.offY * 0.08;
+          });
+        }
+      }
+      renderConceptMap();
+    }
+
+    function toggleLeafBranch(e, branchKey, lecId) {
+      if (e) e.stopPropagation();
+      selectedLectureId = lecId;
+      if (expandedLeafBranches.has(branchKey)) {
+        expandedLeafBranches.delete(branchKey);
+      } else {
+        expandedLeafBranches.add(branchKey);
+      }
+      renderConceptMap();
+      renderInspector(lecId);
+    }
+
+    function toggleAllBranches() {
+      if (expandedBranches.size === lecturesData.length) {
+        expandedBranches.clear();
+      } else {
+        lecturesData.forEach(l => expandedBranches.add(l.id));
+      }
+      renderConceptMap();
+    }
+
+    function toggleAllLeafNodes() {
+      lecturesData.forEach(l => expandedBranches.add(l.id));
+      if (expandedLeafBranches.size > 10) {
+        expandedLeafBranches.clear();
+      } else {
+        lecturesData.forEach(l => {
+          l.branches.forEach((_, idx) => expandedLeafBranches.add(`${l.id}-${idx}`));
+        });
+      }
+      renderConceptMap();
+    }
+
+    function selectLecture(id, centerOnNode = false) {
+      selectedLectureId = id;
+      expandedBranches.add(id);
+      renderLectureList(document.getElementById('global-search').value);
+      renderConceptMap();
+      renderInspector(id);
+
+      if (centerOnNode) {
+        const lec = lecturesData.find(l => l.id === id);
+        if (lec) {
+          const viewport = document.getElementById('canvas-container');
+          panX = viewport.clientWidth / 2 - lec.x * scale;
+          panY = viewport.clientHeight / 2 - lec.y * scale;
+          applyTransform();
+        }
+      }
+    }
+
+    // ============================================================================
+    // RENDER RIGHT SIDEBAR INSPECTOR
+    // ============================================================================
+    function renderInspector(id) {
+      const lec = lecturesData.find(l => l.id === id);
+      if (!lec) return;
+      const isMastered = masteredLectures.has(id);
+      const savedNote = lectureNotes[id] || '';
+
+      const container = document.getElementById('inspector-content');
+      container.innerHTML = `
+        <div class="border-b border-slate-800 pb-3">
+          <div class="flex items-center justify-between gap-1">
+            <span class="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full" style="background:${lec.color}25; color:${lec.color}">
+              Chapter #${lec.id}
+            </span>
+            <div class="flex items-center gap-1">
+              <button onclick="toggleMastered(${lec.id})" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition ${
+                isMastered
+                  ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
+                  : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+              }">
+                ${isMastered ? '✔ Studiato' : 'Segna Studiato'}
+              </button>
+              <button onclick="deleteLecture(${lec.id})" class="px-2 py-1 rounded-lg bg-rose-950/60 hover:bg-rose-900 text-rose-300 text-[11px]" title="Elimina Capitolo">🗑️</button>
+            </div>
+          </div>
+
+          <h2 ondblclick="makeEditable(event, 'lec-title', ${lec.id})" title="Doppio click per modificare"
+            class="editable-hint text-base font-extrabold text-white mt-2">${lec.title}</h2>
+          <p ondblclick="makeEditable(event, 'lec-subtitle', ${lec.id})" title="Doppio click per modificare"
+            class="editable-hint text-xs text-cyan-400 font-medium mt-0.5">${lec.subtitle}</p>
+          <p ondblclick="makeEditable(event, 'lec-summary', ${lec.id})" title="Doppio click per modificare riassunto"
+            class="editable-hint text-xs text-slate-300 mt-2 leading-relaxed bg-slate-950 p-2.5 rounded-xl border border-slate-800">${lec.summary}</p>
+        </div>
+
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Branches (${lec.branches.length})</span>
+          <div class="flex gap-1">
+            <button onclick="addBranchToLecture(event, ${lec.id})" class="text-[10px] px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold">+ Nuova Branch</button>
+            <button onclick="toggleInspectorDetails(true)" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-cyan-300">Espandi</button>
+            <button onclick="toggleInspectorDetails(false)" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">Chiudi</button>
+          </div>
+        </div>
+
+        <div class="space-y-2.5" id="inspector-accordions">
+          ${lec.branches.map((br, bIdx) => `
+            <details open class="group bg-slate-950/90 border border-slate-800 rounded-xl overflow-hidden">
+              <summary class="cursor-pointer p-2.5 flex items-center justify-between text-xs font-bold text-cyan-300 bg-slate-900/60 hover:bg-slate-900 list-none">
+                <span ondblclick="makeEditable(event, 'branch-name', ${lec.id}, ${bIdx})" class="editable-hint truncate flex-1">📂 ${br.name}</span>
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <button onclick="addPointToBranch(event, ${lec.id}, ${bIdx})" class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-900/70 hover:bg-emerald-700 text-emerald-200">+ Punto</button>
+                  <button onclick="deleteBranch(${lec.id}, ${bIdx})" class="text-[10px] px-1.5 py-0.5 rounded bg-rose-950 hover:bg-rose-800 text-rose-300" title="Elimina Branch">×</button>
+                </div>
+              </summary>
+              <div class="p-2.5 space-y-1.5 border-t border-slate-800/80">
+                ${br.items.map((item, iIdx) => `
+                  <div class="bg-slate-900/70 border border-slate-800/70 rounded-lg p-2 flex items-start justify-between gap-2 group/item">
+                    <div ondblclick="makeEditable(event, 'branch-item', ${lec.id}, ${bIdx}, ${iIdx})" title="Doppio click per modificare"
+                      class="editable-hint text-xs text-slate-200 leading-relaxed flex-1">• ${item}</div>
+                    <button onclick="deletePointFromBranch(event, ${lec.id}, ${bIdx}, ${iIdx})" class="opacity-0 group-hover/item:opacity-100 text-rose-400 hover:text-rose-300 text-xs px-1">🗑️</button>
+                  </div>
+                `).join('')}
+              </div>
+            </details>
+          `).join('')}
+        </div>
+
+        <div class="pt-3 border-t border-slate-800">
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">I Miei Appunti Personali</label>
+          <textarea oninput="saveLectureNote(${lec.id}, this.value)" placeholder="Scrivi qui appunti extra per ${lec.title}..."
+            class="w-full h-24 bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500">${savedNote}</textarea>
+        </div>
+      `;
+    }
+
+    function toggleInspectorDetails(openState) {
+      document.querySelectorAll('#inspector-accordions details').forEach(d => {
+        d.open = openState;
+      });
+    }
+
+    function toggleMastered(id) {
+      if (masteredLectures.has(id)) {
+        masteredLectures.delete(id);
+      } else {
+        masteredLectures.add(id);
+      }
+      localStorage.setItem(`${storagePrefix}_mastered`, JSON.stringify([...masteredLectures]));
+      updateProgressBadge();
+      renderLectureList(document.getElementById('global-search').value);
+      renderConceptMap();
+      renderInspector(id);
+    }
+
+    function saveLectureNote(id, val) {
+      lectureNotes[id] = val;
+      localStorage.setItem(`${storagePrefix}_notes`, JSON.stringify(lectureNotes));
+    }
+
+    function updateProgressBadge() {
+      document.getElementById('progress-badge').textContent = `${masteredLectures.size}/${lecturesData.length}`;
+    }
+
+    // ============================================================================
+    // RENDER CLINICAL PROTOCOLS MODULE
+    // ============================================================================
+    function renderPracticals(searchTerm = '') {
+      const pillsContainer = document.getElementById('practical-pills');
+      const listContainer = document.getElementById('practicals-container');
+      const q = searchTerm.toLowerCase().trim();
+
+      pillsContainer.innerHTML = practicalsData.map(p => `
+        <a href="#card-${p.id}" class="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500 text-xs font-semibold text-slate-200 transition">
+          ${p.number}: ${p.title.split('(')[0]}
+        </a>
+      `).join('');
+
+      listContainer.innerHTML = practicalsData.map((p, pIdx) => {
+        if (q) {
+          const match = p.title.toLowerCase().includes(q) ||
+            p.preparations.some(pr => pr.name.toLowerCase().includes(q) || pr.tooth.toLowerCase().includes(q) || pr.steps.some(s => s.detail.toLowerCase().includes(q)));
+          if (!match) return '';
+        }
+        return `
+        <details id="card-${p.id}" open class="practical-card bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+          <summary class="cursor-pointer p-5 bg-slate-900/90 hover:bg-slate-800/60 flex flex-col md:flex-row md:items-center justify-between gap-2 list-none border-b border-slate-800">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-xs font-extrabold">${p.number}</span>
+                <span class="text-xs text-emerald-400 font-semibold">${p.preparations.length} Protocolli Operativi</span>
+              </div>
+              <h3 ondblclick="makeEditable(event, 'prac-title', ${pIdx})" class="editable-hint text-lg font-bold text-white mt-1">${p.title}</h3>
+              <p class="text-xs text-slate-400 mt-0.5">${p.focus}</p>
+            </div>
+            <span class="text-xs text-cyan-400 font-semibold shrink-0">Espandi / Chiudi ▼</span>
+          </summary>
+
+          <div class="p-5 grid grid-cols-1 lg:grid-cols-2 gap-5">
+            ${p.preparations.map((prep, prepIdx) => `
+              <details open class="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden flex flex-col">
+                <summary class="cursor-pointer p-4 bg-slate-900/50 hover:bg-slate-900 border-b border-slate-800 list-none">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-bold uppercase px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">${prep.code}</span>
+                    <span ondblclick="makeEditable(event, 'prep-tooth', ${pIdx}, ${prepIdx})" class="editable-hint text-xs font-semibold text-amber-300">📖 ${prep.tooth}</span>
+                  </div>
+                  <div class="flex items-center justify-between mt-2">
+                    <h4 ondblclick="makeEditable(event, 'prep-name', ${pIdx}, ${prepIdx})" class="editable-hint text-sm font-bold text-white">${prep.name}</h4>
+                    <button onclick="event.preventDefault(); addStepToPrep(${pIdx}, ${prepIdx})" class="px-2 py-0.5 rounded bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 text-[10px] font-bold border border-emerald-500/40">+ Step</button>
+                  </div>
+                  <div class="text-[11px] text-slate-400 mt-1">
+                    <strong>Strumenti / Metodi:</strong>
+                    <span ondblclick="makeEditable(event, 'prep-burs', ${pIdx}, ${prepIdx})" class="editable-hint">${prep.burSet}</span>
+                  </div>
+                </summary>
+
+                <div class="p-4 space-y-2.5">
+                  ${prep.steps.map((st, sIdx) => `
+                    <details open class="step-detail bg-slate-900/90 border border-slate-800/90 rounded-lg overflow-hidden group/step">
+                      <summary class="cursor-pointer px-3 py-2 text-xs font-bold text-cyan-300 hover:text-white flex items-center justify-between list-none">
+                        <span ondblclick="makeEditable(event, 'step-stage', ${pIdx}, ${prepIdx}, ${sIdx})" class="editable-hint">${st.stage}</span>
+                        <div class="flex items-center gap-2">
+                          <button onclick="event.preventDefault(); deleteStepFromPrep(${pIdx}, ${prepIdx}, ${sIdx})" class="opacity-0 group-hover/step:opacity-100 text-rose-400 hover:text-rose-300 text-xs">🗑️</button>
+                          <span class="text-[10px] text-slate-500">±</span>
+                        </div>
+                      </summary>
+                      <div ondblclick="makeEditable(event, 'step-detail', ${pIdx}, ${prepIdx}, ${sIdx})"
+                        class="editable-hint px-3 pb-2.5 pt-1 text-xs text-slate-300 leading-relaxed border-t border-slate-800/60">
+                        ${st.detail}
+                      </div>
+                    </details>
+                  `).join('')}
+                </div>
+              </details>
+            `).join('')}
+          </div>
+        </details>
+      `}).join('');
+    }
+
+    function toggleAllPracticalSteps(openState) {
+      document.querySelectorAll('#practicals-container details').forEach(d => {
+        d.open = openState;
+      });
+    }
+
+    // ============================================================================
+    // INTERACTIONS: MOUSE + TOUCH + THROW + PAN INERTIA + ZOOM IMPULSE
+    // ============================================================================
+    let initialPinchDistance = null;
+    let initialPinchScale = 1;
+
+    function setupCanvasInteractions() {
+      const container = document.getElementById('canvas-container');
+
+      const handlePointerMove = (clientX, clientY) => {
+        if (isPanning) {
+          const deltaX = clientX - lastPanClientX;
+          const deltaY = clientY - lastPanClientY;
+          lastPanClientX = clientX;
+          lastPanClientY = clientY;
+
+          panX = clientX - panStartX;
+          panY = clientY - panStartY;
+          applyTransform();
+
+          // Inject physical G-force inertia into all nodes and wires when panning fast!
+          if (Math.hypot(deltaX, deltaY) > 2) {
+            applyPanInertiaImpulse(deltaX, deltaY);
+          }
+          return;
+        }
+
+        if (dragTarget) {
+          const dxScreen = clientX - dragTarget.startClientX;
+          const dyScreen = clientY - dragTarget.startClientY;
+          if (Math.abs(dxScreen) > 3 || Math.abs(dyScreen) > 3) {
+            dragTarget.hasMoved = true;
+          }
+
+          const rect = container.getBoundingClientRect();
+          const worldX = (clientX - rect.left - panX) / scale;
+          const worldY = (clientY - rect.top - panY) / scale;
+
+          const instVx = worldX - dragTarget.lastWorldX;
+          const instVy = worldY - dragTarget.lastWorldY;
+          dragTarget.lastWorldX = worldX;
+          dragTarget.lastWorldY = worldY;
+
+          if (dragTarget.type === 'lecture') {
+            const lec = lecturesData.find(l => l.id === dragTarget.lecId);
+            if (lec) {
+              lec.x = worldX + dragTarget.grabOffsetX;
+              lec.y = worldY + dragTarget.grabOffsetY;
+              lec.restX = lec.x;
+              lec.restY = lec.y;
+              lec.vx = lec.vx * 0.4 + instVx * 0.6;
+              lec.vy = lec.vy * 0.4 + instVy * 0.6;
+
+              if (!physicsEnabled) {
+                const lecEl = domLectureNodes[lec.id];
+                if (lecEl) {
+                  lecEl.style.left = `${lec.x - 125}px`;
+                  lecEl.style.top = `${lec.y - 45}px`;
+                }
+              }
+            }
+          } else if (dragTarget.type === 'branch') {
+            const lec = lecturesData.find(l => l.id === dragTarget.lecId);
+            const br = lec?.branches[dragTarget.bIdx];
+            if (br) {
+              br.bx = worldX + dragTarget.grabOffsetX;
+              br.by = worldY + dragTarget.grabOffsetY;
+              br.offX = br.bx - lec.x;
+              br.offY = br.by - lec.y;
+              br.vx = br.vx * 0.4 + instVx * 0.6;
+              br.vy = br.vy * 0.4 + instVy * 0.6;
+
+              if (!physicsEnabled) {
+                const bEl = domBranchNodes[`${lec.id}-${dragTarget.bIdx}`];
+                if (bEl) {
+                  bEl.style.left = `${br.bx - 115}px`;
+                  bEl.style.top = `${br.by - 20}px`;
+                }
+              }
+            }
+          }
+        }
+      };
+
+      const handlePointerUp = () => {
+        if (isPanning) {
+          isPanning = false;
+          container.classList.remove('panning');
+        }
+        if (dragTarget) {
+          if (!dragTarget.hasMoved && dragTarget.type === 'lecture') {
+            selectLecture(dragTarget.lecId, false);
+          } else if (dragTarget.hasMoved) {
+            if (physicsEnabled) {
+              if (dragTarget.type === 'lecture') {
+                const lec = lecturesData.find(l => l.id === dragTarget.lecId);
+                if (lec) {
+                  const throwVx = Math.max(-45, Math.min(45, lec.vx));
+                  const throwVy = Math.max(-45, Math.min(45, lec.vy));
+                  lec.restX = lec.x + throwVx * 8.5;
+                  lec.restY = lec.y + throwVy * 8.5;
+                  lec.vx = throwVx * 1.35;
+                  lec.vy = throwVy * 1.35;
+                }
+              } else if (dragTarget.type === 'branch') {
+                const lec = lecturesData.find(l => l.id === dragTarget.lecId);
+                const br = lec?.branches[dragTarget.bIdx];
+                if (br) {
+                  const throwVx = Math.max(-45, Math.min(45, br.vx));
+                  const throwVy = Math.max(-45, Math.min(45, br.vy));
+                  let newOffX = (br.bx - lec.x) + throwVx * 7.5;
+                  let newOffY = (br.by - lec.y) + throwVy * 7.5;
+                  const dist = Math.hypot(newOffX, newOffY);
+                  if (dist > 680) {
+                    newOffX = (newOffX / dist) * 680;
+                    newOffY = (newOffY / dist) * 680;
+                  }
+                  br.offX = newOffX;
+                  br.offY = newOffY;
+                  br.vx = throwVx * 1.4;
+                  br.vy = throwVy * 1.4;
+                }
+              }
+            }
+            saveAllData();
+          }
+          dragTarget = null;
+        }
+      };
+
+      container.addEventListener('mousedown', (e) => {
+        if (e.target.closest('.draggable-node') || e.target.closest('button') || e.target.isContentEditable) return;
+        isPanning = true;
+        container.classList.add('panning');
+        panStartX = e.clientX - panX;
+        panStartY = e.clientY - panY;
+        lastPanClientX = e.clientX;
+        lastPanClientY = e.clientY;
+      });
+      window.addEventListener('mousemove', (e) => handlePointerMove(e.clientX, e.clientY));
+      window.addEventListener('mouseup', handlePointerUp);
+
+      container.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2) {
+          isPanning = false;
+          dragTarget = null;
+          initialPinchDistance = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+          );
+          initialPinchScale = scale;
+          return;
+        }
+        if (e.touches.length === 1) {
+          if (e.target.closest('.draggable-node') || e.target.closest('button') || e.target.isContentEditable) return;
+          isPanning = true;
+          panStartX = e.touches[0].clientX - panX;
+          panStartY = e.touches[0].clientY - panY;
+          lastPanClientX = e.touches[0].clientX;
+          lastPanClientY = e.touches[0].clientY;
+        }
+      }, { passive: false });
+
+      window.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 2 && initialPinchDistance) {
+          e.preventDefault();
+          const newDist = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+          );
+          const rect = container.getBoundingClientRect();
+          const midX = ((e.touches[0].clientX + e.touches[1].clientX) / 2) - rect.left;
+          const midY = ((e.touches[0].clientY + e.touches[1].clientY) / 2) - rect.top;
+          const worldX = (midX - panX) / scale;
+          const worldY = (midY - panY) / scale;
+
+          const newScale = Math.min(2.2, Math.max(0.25, initialPinchScale * (newDist / initialPinchDistance)));
+          const zoomDir = newScale > scale ? 1 : -1;
+          applyZoomPhysicsImpulse(zoomDir * 0.45, worldX, worldY);
+
+          panX = midX - worldX * newScale;
+          panY = midY - worldY * newScale;
+          scale = newScale;
+          applyTransform();
+          return;
+        }
+        if (e.touches.length === 1 && (isPanning || dragTarget)) {
+          e.preventDefault();
+          handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+        }
+      }, { passive: false });
+
+      window.addEventListener('touchend', () => {
+        initialPinchDistance = null;
+        handlePointerUp();
+      });
+
+      // Wheel Zoom at Cursor + Physical Radial Response!
+      container.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const rect = container.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        const worldX = (mouseX - panX) / scale;
+        const worldY = (mouseY - panY) / scale;
+
+        const isZoomIn = e.deltaY < 0;
+        const zoomFactor = isZoomIn ? 1.12 : 0.89;
+        const newScale = Math.min(2.2, Math.max(0.25, scale * zoomFactor));
+
+        // Trigger physical push outward on Zoom In, and pull inward on Zoom Out!
+        applyZoomPhysicsImpulse(isZoomIn ? 1 : -1, worldX, worldY);
+
+        panX = mouseX - worldX * newScale;
+        panY = mouseY - worldY * newScale;
+        scale = newScale;
+
+        applyTransform();
+      }, { passive: false });
+    }
+
+    function zoomAtCenter(factor) {
+      const container = document.getElementById('canvas-container');
+      const cx = container.clientWidth / 2;
+      const cy = container.clientHeight / 2;
+      const worldX = (cx - panX) / scale;
+      const worldY = (cy - panY) / scale;
+      const newScale = Math.min(2.2, Math.max(0.25, scale * factor));
+      applyZoomPhysicsImpulse(factor > 1 ? 1 : -1, worldX, worldY);
+      panX = cx - worldX * newScale;
+      panY = cy - worldY * newScale;
+      scale = newScale;
+      applyTransform();
+    }
+
+    function resetMapView() {
+      const container = document.getElementById('canvas-container');
+      scale = iphoneMode ? 0.38 : 0.65;
+      panX = container.clientWidth / 2 - hubX * scale;
+      panY = container.clientHeight / 2 - hubY * scale;
+      applyTransform();
+    }
+
+    function applyTransform() {
+      const world = document.getElementById('map-world');
+      world.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+      document.getElementById('zoom-label').textContent = `${Math.round(scale * 100)}%`;
+    }
+
+    // ============================================================================
+    // ANKI EXPORT & JSON BACKUP
+    // ============================================================================
+    function generateAnkiExport() {
+      const lines = [];
+      lecturesData.forEach(lec => {
+        lec.branches.forEach(br => {
+          const combinedItems = br.items.join('\n• ');
+          lines.push(`"${lec.title} — ${br.name}"\t"• ${combinedItems}"`);
+        });
+      });
+      practicalsData.forEach(p => {
+        p.preparations.forEach(prep => {
+          const allSteps = prep.steps.map(s => `${s.stage}: ${s.detail}`).join('\n');
+          lines.push(`"${p.number} (${prep.code} - ${prep.tooth}): Main steps & parameters for ${prep.name}?"\t"${allSteps}"`);
+        });
+      });
+      const out = document.getElementById('anki-output');
+      if (out) out.value = lines.join('\n');
+    }
+
+    function copyAnkiText() {
+      const el = document.getElementById('anki-output');
+      el.select();
+      document.execCommand('copy');
+    }
+
+    function downloadAnkiFile() {
+      const text = document.getElementById('anki-output').value;
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Medical_Psychology_MU_Plovdiv_Anki.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportBackupJSON() {
+      const payload = {
+        ...activeConfig,
+        chapters: lecturesData,
+        practicals: practicalsData,
+        referenceTables: referenceData
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Medical_Psychology_v4_Backup.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function resetToDefaults() {
+      if (!confirm("Vuoi ripristinare tutti i 17 capitoli, posizioni e protocolli ai valori originali del libro?")) return;
+      localStorage.removeItem('medpsych_v4_subject_config');
+      localStorage.removeItem(`${storagePrefix}_lectures`);
+      localStorage.removeItem(`${storagePrefix}_practicals`);
+      location.reload();
+    }
+
+    function switchMode(mode) {
+      ['map', 'practicals', 'reference', 'anki'].forEach(m => {
+        document.getElementById(`view-${m}`).classList.toggle('hidden', m !== mode);
+        const btn = document.getElementById(`tab-${m}`);
+        if (btn) {
+          if (m === mode) {
+            btn.className = 'mode-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-600 text-white transition';
+          } else {
+            btn.className = 'mode-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition';
+          }
+        }
+      });
+    }
+
+    window.addEventListener('DOMContentLoaded', initApp);
+  </script>
+</body>
+</html>
